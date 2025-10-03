@@ -156,8 +156,6 @@ if page == "Invoice Analysis":
     with col1:
         st.metric("🧾 Total Matched POs", total_matched)
     with col2:
-        st.metric("💰 Total PO Value", f"{total_po_value:,.2f}")
-    with col3:
         st.metric("💳 Total Invoice Value", f"{total_invoice_value:,.2f}")
 
     # ---------------------------
