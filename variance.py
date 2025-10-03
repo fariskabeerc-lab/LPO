@@ -116,8 +116,10 @@ if page == "Invoice Analysis":
 
     # Match invoices with same Particulars and Created Date after PO
     def match_invoice(row, inv_df):
-        matches = inv_df[(inv_df["Particulars"] == row["Particulars"]) &
-                         (inv_df["Created Date"] > row["Created Date"])]
+        matches = inv_df[
+            (inv_df["Particulars"] == row["Particulars"]) &
+            (inv_df["Created Date"] > row["Created Date"])
+        ]
         if not matches.empty:
             inv_row = matches.iloc[0]
             return pd.Series({
@@ -134,6 +136,7 @@ if page == "Invoice Analysis":
                 "Invoice Particulars": None
             })
 
+    # Apply matching
     invoice_matches = po_filtered.apply(lambda r: match_invoice(r, invoice_df), axis=1)
     po_with_invoice = pd.concat([po_filtered.reset_index(drop=True), invoice_matches], axis=1)
 
@@ -159,24 +162,66 @@ if page == "Invoice Analysis":
         with col3:
             st.metric("💳 Total Invoice Value", f"{total_invoice_value:,.2f}")
 
-        st.markdown(f"**Total PO Transactions:** {total_transactions_all}  |  **Filtered Transactions:** {total_transactions_filtered}")
+        st.markdown(
+            f"**Total PO Transactions:** {total_transactions_all}  |  "
+            f"**Filtered Transactions:** {total_transactions_filtered}"
+        )
 
         # ---------------------------
-        # Display filtered invoice table
+        # Combined PO vs Invoice bar chart
+        # ---------------------------
+        st.subheader("PO vs Invoice Totals by Particulars (Top 30)")
+        df_compare = (
+            filtered_invoice.groupby("Particulars")[["Total", "Invoice Total"]]
+            .sum()
+            .reset_index()
+            .sort_values(by="Total", ascending=False)
+            .head(30)
+        )
+
+        df_melt = df_compare.melt(id_vars="Particulars", value_vars=["Total", "Invoice Total"],
+                                  var_name="Type", value_name="Value")
+
+        fig2 = px.bar(
+            df_melt,
+            x="Value",
+            y="Particulars",
+            color="Type",
+            orientation="h",
+            barmode="group",
+            text="Value",
+            color_discrete_map={"Total": "teal", "Invoice Total": "orange"}
+        )
+        fig2.update_traces(texttemplate="%{text:,.2f}", textposition="outside")
+        fig2.update_layout(
+            xaxis_title="Value",
+            yaxis_title="Particulars",
+            yaxis=dict(autorange="reversed"),
+            plot_bgcolor="#1e1e1e",
+            paper_bgcolor="#1e1e1e",
+            font=dict(color="white"),
+            height=800
+        )
+        st.plotly_chart(fig2, use_container_width=True)
+
+        # ---------------------------
+        # Display filtered invoice table with PO + Invoice details
         # ---------------------------
         display_cols = [
-            "Tran No",            # PO Tran No
-            "Invoice Tran No",    # Invoice Tran No
-            "Particulars",        # PO Particulars
-            "Invoice Particulars",# Invoice Particulars
-            "Total",              # PO Total
-            "Invoice Total",      # Invoice Total
-            "Created Date",       # PO Created Date
-            "Invoice Created Date",# Invoice Created Date
-            "Converted",
-            "Posted"
+            "Tran No",              # PO Tran No
+            "Tran Date",            # PO Tran Date
+            "Created Date",         # PO Created Date
+            "Particulars",          # PO Particulars
+            "Total",                # PO Total
+            "Converted",            # PO Converted
+            "Posted",               # PO Posted
+            "Invoice Tran No",      # Invoice Tran No
+            "Invoice Particulars",  # Invoice Particulars
+            "Invoice Total",        # Invoice Total
+            "Invoice Created Date"  # Invoice Created Date
         ]
-        st.subheader("Filtered Invoice Transactions")
+
+        st.subheader("Filtered Invoice Transactions (PO + Invoice Details)")
         st.dataframe(
             filtered_invoice[display_cols].sort_values(by="Invoice Created Date", ascending=False),
             use_container_width=True,
