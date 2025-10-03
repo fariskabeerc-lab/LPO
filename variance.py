@@ -8,9 +8,15 @@ import plotly.express as px
 df = pd.read_excel("transactions.xlsx")
 invoice_df = pd.read_excel("invoice_list.xlsx")
 
-# Clean column names
+# ---------------------------
+# Clean column names (remove spaces, newlines, carriage returns)
+# ---------------------------
 df.columns = df.columns.str.strip().str.replace("\n", "").str.replace("\r", "")
 invoice_df.columns = invoice_df.columns.str.strip().str.replace("\n", "").str.replace("\r", "")
+
+# Optional: show columns to verify
+# st.write("Transactions columns:", df.columns.tolist())
+# st.write("Invoice columns:", invoice_df.columns.tolist())
 
 # ---------------------------
 # Sidebar Page Selection
@@ -26,13 +32,11 @@ if page == "Transactions Dashboard":
 
     # Sidebar Filters
     st.sidebar.header("Filters")
-
     po_status = st.sidebar.selectbox(
         "PO Status",
         options=["All"] + sorted(df["Posted"].dropna().unique().tolist()),
         index=0
     )
-
     converted_status = st.sidebar.selectbox(
         "Converted Status",
         options=["All"] + sorted(df["Converted"].dropna().unique().tolist()),
@@ -109,23 +113,25 @@ if page == "Invoice Analysis":
     st.set_page_config(page_title="Invoice Analysis", layout="wide")
     st.title("📄 Invoice Analysis")
 
-    # Convert date columns to datetime
-    df["Tran Date"] = pd.to_datetime(df["Tran Date"])
-    invoice_df["Invoice Print Date"] = pd.to_datetime(invoice_df["Invoice Print Date"])
+    # Ensure date columns are datetime
+    if "Tran Date" in df.columns:
+        df["Tran Date"] = pd.to_datetime(df["Tran Date"], errors="coerce")
+    if "Invoice Print Date" in invoice_df.columns:
+        invoice_df["Invoice Print Date"] = pd.to_datetime(invoice_df["Invoice Print Date"], errors="coerce")
 
-    # Merge invoice with transactions on 'Particulars' (change if needed)
+    # Merge invoice with transactions on 'Particulars' (adjust key if needed)
     merged_df = pd.merge(
         invoice_df,
         df,
-        on=["Particulars"],  # change to correct key if needed (Supplier or Reference)
+        on=["Particulars"],  # adjust to your key column
         suffixes=("_inv", "_po")
     )
 
     # Filter: PO checked, Converted unchecked, Invoice after PO date
     filtered_invoice = merged_df[
-        (merged_df["Posted_po"] == "Checked") &
-        (merged_df["Converted_po"] == "Unchecked") &
-        (merged_df["Invoice Print Date"] > merged_df["Tran Date_po"])
+        (merged_df.get("Posted_po") == "Checked") &
+        (merged_df.get("Converted_po") == "Unchecked") &
+        (merged_df.get("Invoice Print Date") > merged_df.get("Tran Date_po"))
     ]
 
     st.subheader("Invoices Received after PO but Not Yet Converted")
