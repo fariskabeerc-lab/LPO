@@ -5,23 +5,19 @@ import plotly.express as px
 # ---------------------------
 # Load datasets
 # ---------------------------
-df = pd.read_excel("transactions.xlsx")
-invoice_df = pd.read_excel("invoice_list.xlsx")
+df = pd.read_excel("transactions.xlsx")       # Transaction table
+invoice_df = pd.read_excel("invoice_list.xlsx")  # Invoice table
 
 # ---------------------------
-# Clean column names (remove spaces, newlines, carriage returns)
+# Clean column names
 # ---------------------------
-df.columns = df.columns.str.strip().str.replace("\n", "").str.replace("\r", "")
-invoice_df.columns = invoice_df.columns.str.strip().str.replace("\n", "").str.replace("\r", "")
-
-# Optional: show columns to verify
-# st.write("Transactions columns:", df.columns.tolist())
-# st.write("Invoice columns:", invoice_df.columns.tolist())
+df.columns = df.columns.str.strip()
+invoice_df.columns = invoice_df.columns.str.strip()
 
 # ---------------------------
 # Sidebar Page Selection
 # ---------------------------
-page = st.sidebar.radio("📑 Select Page", ["Transactions Dashboard", "Invoice Analysis"])
+page = st.sidebar.radio("📑 Select Page", ["Transactions Dashboard", "Invoices Not Converted"])
 
 # ---------------------------
 # Transactions Dashboard Page
@@ -107,39 +103,51 @@ if page == "Transactions Dashboard":
     )
 
 # ---------------------------
-# Invoice Analysis Page
+# Invoices Not Converted Page
 # ---------------------------
-if page == "Invoice Analysis":
-    st.set_page_config(page_title="Invoice Analysis", layout="wide")
-    st.title("📄 Invoice Analysis")
+if page == "Invoices Not Converted":
+    st.set_page_config(page_title="Invoices Not Converted", layout="wide")
+    st.title("📄 Transactions with Invoices Not Yet Converted")
 
-    # Ensure date columns are datetime
-    if "Tran Date" in df.columns:
-        df["Tran Date"] = pd.to_datetime(df["Tran Date"], errors="coerce")
-    if "Invoice Print Date" in invoice_df.columns:
-        invoice_df["Invoice Print Date"] = pd.to_datetime(invoice_df["Invoice Print Date"], errors="coerce")
+    # Sidebar Filters
+    st.sidebar.header("Filters")
+    po_status_inv = st.sidebar.selectbox(
+        "PO Status",
+        options=["All"] + sorted(df["Posted"].dropna().unique().tolist()),
+        index=0
+    )
+    converted_status_inv = st.sidebar.selectbox(
+        "Converted Status",
+        options=["All"] + sorted(df["Converted"].dropna().unique().tolist()),
+        index=0
+    )
 
-    # Merge invoice with transactions on 'Particulars' (adjust key if needed)
+    # Merge transactions with invoice list
+    # Use 'Tran No' as key; adjust if 'Particulars' is the correct key
     merged_df = pd.merge(
         invoice_df,
         df,
-        on=["Particulars"],  # adjust to your key column
+        on=["Tran No"],  
         suffixes=("_inv", "_po")
     )
 
-    # Filter: PO checked, Converted unchecked, Invoice after PO date
-    filtered_invoice = merged_df[
-        (merged_df.get("Posted_po") == "Checked") &
-        (merged_df.get("Converted_po") == "Unchecked") &
-        (merged_df.get("Invoice Print Date") > merged_df.get("Tran Date_po"))
-    ]
+    filtered_df = merged_df.copy()
 
-    st.subheader("Invoices Received after PO but Not Yet Converted")
+    # Apply filters
+    if po_status_inv != "All":
+        filtered_df = filtered_df[filtered_df["Posted_po"] == po_status_inv]
+    if converted_status_inv != "All":
+        filtered_df = filtered_df[filtered_df["Converted_po"] == converted_status_inv]
+
+    # Only show transactions with invoices where Converted = Unchecked
+    final_df = filtered_df[filtered_df["Converted_po"] == "Unchecked"]
+
+    st.markdown(f"**Total Transactions:** {len(final_df)}")
+
     st.dataframe(
-        filtered_invoice[
-            ["Tran No_po", "Tran Date_po", "Particulars", "Total_po", 
-             "Invoice Print Date", "Total_inv", "Net Total_po", "Remark"]
-        ],
+        final_df[
+            ["Tran No", "Particulars", "Total_po", "Invoice Print Date", "Converted_po", "Posted_po"]
+        ].sort_values(by="Invoice Print Date", ascending=False),
         use_container_width=True,
         height=600
     )
