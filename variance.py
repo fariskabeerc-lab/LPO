@@ -113,7 +113,7 @@ if page == "Invoice Analysis":
 
     # Filter POs: Posted = Checked, Converted = Unchecked
     po_filtered = df[(df["Posted"] == "Checked") & (df["Converted"] == "Unchecked")].copy()
-    
+
     # Ensure numeric
     po_filtered["Total"] = pd.to_numeric(po_filtered["Total"], errors="coerce")
     invoice_df["Total"] = pd.to_numeric(invoice_df["Total"], errors="coerce")
@@ -145,7 +145,24 @@ if page == "Invoice Analysis":
     # Keep only POs with a matching invoice
     filtered_po_invoice = po_with_invoice[po_with_invoice["Invoice Tran No"].notnull()]
 
-    # Display combined PO + Invoice details
+    # ---------------------------
+    # Summary Metrics
+    # ---------------------------
+    total_matched = len(filtered_po_invoice)
+    total_po_value = filtered_po_invoice["Total"].sum()
+    total_invoice_value = filtered_po_invoice["Invoice Total"].sum()
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("🧾 Total Matched POs", total_matched)
+    with col2:
+        st.metric("💰 Total PO Value", f"{total_po_value:,.2f}")
+    with col3:
+        st.metric("💳 Total Invoice Value", f"{total_invoice_value:,.2f}")
+
+    # ---------------------------
+    # Display combined PO + Invoice table
+    # ---------------------------
     display_cols = [
         "Tran No", "Particulars", "Total", "Created Date", "Posted", "Converted",
         "Invoice Tran No", "Invoice Created Date", "Invoice Total"
