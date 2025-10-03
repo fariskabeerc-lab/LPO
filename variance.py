@@ -64,28 +64,19 @@ if page == "Transactions Dashboard":
     st.markdown(f"**Total Transactions in Dataset:** {len(df)}  |  **Filtered Transactions:** {total_count_filtered}")
 
     # ---------------------------
-    # Top 30 Transactions & Particulars Combined
+    # Top 30 transactions graph
     # ---------------------------
-    st.subheader("Top 30 Transactions / Particulars by Total Value")
-
-    # Aggregate totals by Particulars and take top 30
-    top30_particulars = df_filtered.groupby("Particulars", as_index=False)["Total"].sum()
-    top30_particulars = top30_particulars.sort_values(by="Total", ascending=False).head(30)
-
-    # Merge to get first transaction number for hover info
-    first_tran = df_filtered.groupby("Particulars")["Tran No"].first().reset_index()
-    top30 = pd.merge(top30_particulars, first_tran, on="Particulars", how="left")
-
+    df_top30 = df_filtered.sort_values(by="Total", ascending=False).head(30)
+    st.subheader("Top 30 Transactions by Total Value")
     fig = px.bar(
-        top30,
+        df_top30,
         x="Total",
         y="Particulars",
         orientation="h",
         text="Total",
-        hover_data=["Tran No"],
+        hover_data=["Tran No", "Tran Date", "Discount", "Net Total"],
         color_discrete_sequence=["teal"]
     )
-
     fig.update_traces(texttemplate="%{text:,.2f}", textposition="outside", marker=dict(line=dict(width=1, color="white")))
     fig.update_layout(
         xaxis_title="Total Value",
@@ -97,7 +88,6 @@ if page == "Transactions Dashboard":
         paper_bgcolor="#1e1e1e",
         font=dict(color="white")
     )
-
     st.plotly_chart(fig, use_container_width=True)
 
     # ---------------------------
