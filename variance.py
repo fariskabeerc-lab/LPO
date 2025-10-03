@@ -9,15 +9,15 @@ df = pd.read_excel("transactions.xlsx")
 # df = pd.read_csv("transactions.csv")
 
 # ---------------------------
-# Sort by Total (ascending)
+# Sort by Total (descending) to get top 30
 # ---------------------------
-df_sorted = df.sort_values(by="Total", ascending=True)
+df_sorted = df.sort_values(by="Total", ascending=False).head(30)
 
 # ---------------------------
 # Dashboard Title
 # ---------------------------
 st.set_page_config(page_title="Transaction Dashboard", layout="wide")
-st.title("📊 Transaction Dashboard")
+st.title("📊 Transaction Dashboard - Top 30 Transactions")
 
 # ---------------------------
 # Key Metrics
@@ -40,7 +40,7 @@ with col3:
 # ---------------------------
 # Horizontal Bar Chart (Dark Mode)
 # ---------------------------
-st.subheader("Transactions by Total (Ascending)")
+st.subheader("Top 30 Transactions by Total Value")
 
 fig = px.bar(
     df_sorted,
@@ -49,8 +49,8 @@ fig = px.bar(
     orientation="h",
     text="Total",
     hover_data=["Tran Date", "Particulars", "Discount", "Net Total"],
-    color="Total",  # Gradient based on Total
-    color_continuous_scale="Viridis"
+    color="Total",
+    color_continuous_scale=px.colors.sequential.Plasma  # Bright colors for dark background
 )
 
 fig.update_traces(
@@ -63,10 +63,10 @@ fig.update_layout(
     xaxis_title="Total Value",
     yaxis_title="Transaction No",
     bargap=0.25,
-    height=600,
-    plot_bgcolor="#1e1e1e",  # Dark background
-    paper_bgcolor="#1e1e1e",
-    font=dict(color="white"),  # White font for dark background
+    height=800,
+    plot_bgcolor="#0e1117",  # Dark background
+    paper_bgcolor="#0e1117",
+    font=dict(color="white"),
     xaxis=dict(gridcolor="gray"),
     yaxis=dict(gridcolor="gray"),
     coloraxis_colorbar=dict(title="Total")
@@ -75,9 +75,9 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 
 # ---------------------------
-# Sorted Transactions Table
+# Sorted Transactions Table (Top 30)
 # ---------------------------
-st.subheader("Detailed Transactions Table (Sorted by Total)")
+st.subheader("Top 30 Detailed Transactions Table")
 
 st.dataframe(
     df_sorted[
