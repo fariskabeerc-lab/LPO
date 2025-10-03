@@ -105,11 +105,11 @@ if page == "Transactions Dashboard":
     )
 
 # ---------------------------
-# Invoice Analysis (PO Details Only)
+# Invoice Analysis (PO details only, invoices received after PO)
 # ---------------------------
 if page == "Invoice Analysis":
-    st.set_page_config(page_title="PO Details for Matched Invoices", layout="wide")
-    st.title("📄 PO Details for Transactions with Invoices")
+    st.set_page_config(page_title="PO Details with Received Invoices", layout="wide")
+    st.title("📄 PO Details with Invoices Received After PO Creation")
 
     # Filter POs: Posted = Checked, Converted = Unchecked
     po_filtered = df[(df["Posted"] == "Checked") & (df["Converted"] == "Unchecked")].copy()
@@ -118,20 +118,18 @@ if page == "Invoice Analysis":
     po_filtered["Total"] = pd.to_numeric(po_filtered["Total"], errors="coerce")
     invoice_df["Total"] = pd.to_numeric(invoice_df["Total"], errors="coerce")
 
-    # Match invoices with same Particulars and Created Date after PO
-    def match_invoice(row, inv_df):
-        matches = inv_df[(inv_df["Particulars"] == row["Particulars"]) & (inv_df["Created Date"] > row["Created Date"])]
-        if not matches.empty:
-            return True  # Match found
-        else:
-            return False
+    # Keep only POs that have invoices with same Particulars and Created Date after PO
+    def po_has_invoice_after_creation(po_row, inv_df):
+        matches = inv_df[(inv_df["Particulars"] == po_row["Particulars"]) & 
+                         (inv_df["Created Date"] > po_row["Created Date"])]
+        return not matches.empty
 
-    # Keep only POs that have matching invoices
-    po_with_invoice = po_filtered[po_filtered.apply(lambda r: match_invoice(r, invoice_df), axis=1)]
+    # Apply filter
+    po_with_invoice = po_filtered[po_filtered.apply(lambda r: po_has_invoice_after_creation(r, invoice_df), axis=1)]
 
     # Display PO details only
     display_cols = ["Tran No", "Particulars", "Total", "Created Date", "Posted", "Converted"]
-    st.subheader("PO Details for Matched Invoices")
+    st.subheader("PO Details for which Invoices Were Received After Creation")
     st.dataframe(
         po_with_invoice[display_cols].sort_values(by="Created Date", ascending=False),
         use_container_width=True,
