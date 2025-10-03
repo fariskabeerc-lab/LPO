@@ -5,24 +5,14 @@ import plotly.express as px
 # ---------------------------
 # Load datasets
 # ---------------------------
-df = pd.read_excel("transactions.xlsx")         # PO file
-invoice_df = pd.read_excel("invoice_list.xlsx") # Invoice file
+df = pd.read_excel("transactions.xlsx")      # PO dataset
+invoice_df = pd.read_excel("invoice_list.xlsx")  # Invoice dataset
 
 # ---------------------------
 # Clean column names
 # ---------------------------
-def clean_cols(df):
-    df.columns = df.columns.str.strip().str.replace("\n", "").str.replace("\r", "")
-    return df
-
-df = clean_cols(df)
-invoice_df = clean_cols(invoice_df)
-
-# ---------------------------
-# Convert necessary columns to datetime
-# ---------------------------
-df["Created Date"] = pd.to_datetime(df["Created Date"], errors="coerce")
-invoice_df["Created Date"] = pd.to_datetime(invoice_df["Created Date"], errors="coerce")
+df.columns = df.columns.str.strip().str.replace("\n", "").str.replace("\r", "")
+invoice_df.columns = invoice_df.columns.str.strip().str.replace("\n", "").str.replace("\r", "")
 
 # ---------------------------
 # Sidebar Page Selection
@@ -56,11 +46,9 @@ if page == "Transactions Dashboard":
     if converted_status != "All":
         df_filtered = df_filtered[df_filtered["Converted"] == converted_status]
 
-    # Metrics
-    total_sum_all = df["Total"].sum()
-    total_count_all = len(df)
-    total_qty_all = df["Total Qty"].sum() if "Total Qty" in df.columns else 0
-
+    # ---------------------------
+    # Key Metrics
+    # ---------------------------
     total_sum_filtered = df_filtered["Total"].sum()
     total_count_filtered = len(df_filtered)
     total_qty_filtered = df_filtered["Total Qty"].sum() if "Total Qty" in df_filtered.columns else 0
@@ -73,12 +61,13 @@ if page == "Transactions Dashboard":
     with col3:
         st.metric("📦 Total Quantity", f"{total_qty_filtered:,.0f}")
 
-    st.markdown(f"**Total Transactions in dataset:** {total_count_all}  |  **Filtered Transactions:** {total_count_filtered}")
+    st.markdown(f"**Total Transactions in Dataset:** {len(df)}  |  **Filtered Transactions:** {total_count_filtered}")
 
-    # Top 30 transactions
+    # ---------------------------
+    # Top 30 transactions graph
+    # ---------------------------
     df_top30 = df_filtered.sort_values(by="Total", ascending=False).head(30)
-    st.subheader("Top 30 Transactions by Total Value (Filtered)")
-
+    st.subheader("Top 30 Transactions by Total Value")
     fig = px.bar(
         df_top30,
         x="Total",
@@ -88,13 +77,7 @@ if page == "Transactions Dashboard":
         hover_data=["Tran No", "Tran Date", "Discount", "Net Total"],
         color_discrete_sequence=["teal"]
     )
-
-    fig.update_traces(
-        texttemplate="%{text:,.2f}",
-        textposition="outside",
-        marker=dict(line=dict(width=1, color="white"))
-    )
-
+    fig.update_traces(texttemplate="%{text:,.2f}", textposition="outside", marker=dict(line=dict(width=1, color="white")))
     fig.update_layout(
         xaxis_title="Total Value",
         yaxis_title="Particulars",
@@ -105,15 +88,14 @@ if page == "Transactions Dashboard":
         paper_bgcolor="#1e1e1e",
         font=dict(color="white")
     )
-
     st.plotly_chart(fig, use_container_width=True)
 
+    # ---------------------------
     # Full table
+    # ---------------------------
     st.subheader("Filtered Transactions Table")
     st.dataframe(
-        df_filtered[
-            ["Tran No", "Tran Date", "Particulars", "Total", "Discount", "Net Total", "Total Qty", "Posted", "Converted"]
-        ],
+        df_filtered[["Tran No", "Tran Date", "Particulars", "Total", "Discount", "Net Total", "Total Qty", "Posted", "Converted"]],
         use_container_width=True,
         height=600
     )
@@ -132,7 +114,7 @@ if page == "Invoice Analysis":
     po_filtered["Total"] = pd.to_numeric(po_filtered["Total"], errors="coerce")
     invoice_df["Total"] = pd.to_numeric(invoice_df["Total"], errors="coerce")
 
-    # For each PO, find first matching invoice after Created Date for same Particular
+    # Match invoices with same Particulars and Created Date after PO
     def match_invoice(row, inv_df):
         matches = inv_df[(inv_df["Particulars"] == row["Particulars"]) &
                          (inv_df["Created Date"] > row["Created Date"])]
@@ -141,13 +123,15 @@ if page == "Invoice Analysis":
             return pd.Series({
                 "Invoice Tran No": inv_row["Tran No"],
                 "Invoice Created Date": inv_row["Created Date"],
-                "Invoice Total": inv_row["Total"]
+                "Invoice Total": inv_row["Total"],
+                "Invoice Particulars": inv_row["Particulars"]
             })
         else:
             return pd.Series({
                 "Invoice Tran No": None,
                 "Invoice Created Date": None,
-                "Invoice Total": 0
+                "Invoice Total": None,
+                "Invoice Particulars": None
             })
 
     invoice_matches = po_filtered.apply(lambda r: match_invoice(r, invoice_df), axis=1)
@@ -157,7 +141,7 @@ if page == "Invoice Analysis":
     filtered_invoice = po_with_invoice[po_with_invoice["Invoice Tran No"].notnull()]
 
     # ---------------------------
-    # Key Insights (from filtered_invoice only)
+    # Key Insights (filtered only)
     # ---------------------------
     if filtered_invoice.empty:
         st.info("No transactions match the criteria.")
@@ -177,15 +161,18 @@ if page == "Invoice Analysis":
 
         st.markdown(f"**Total PO Transactions:** {total_transactions_all}  |  **Filtered Transactions:** {total_transactions_filtered}")
 
-        # Display filtered invoice table with PO Tran No + Invoice Tran No
+        # ---------------------------
+        # Display filtered invoice table
+        # ---------------------------
         display_cols = [
             "Tran No",            # PO Tran No
             "Invoice Tran No",    # Invoice Tran No
-            "Particulars",
+            "Particulars",        # PO Particulars
+            "Invoice Particulars",# Invoice Particulars
             "Total",              # PO Total
-            "Invoice Total",
+            "Invoice Total",      # Invoice Total
             "Created Date",       # PO Created Date
-            "Invoice Created Date",
+            "Invoice Created Date",# Invoice Created Date
             "Converted",
             "Posted"
         ]
