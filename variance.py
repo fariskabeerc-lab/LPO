@@ -129,17 +129,17 @@ if page == "Invoice Analysis":
         suffixes=("_po", "_inv")
     )
 
-    # Filter: Invoice Print Date after PO Date
-    filtered_invoice = merged_df[merged_df["Invoice Print Date"] > merged_df["Tran Date"]]
+    # Filter: Invoice received after PO date
+    filtered_invoice = merged_df[merged_df["Invoice Print Date_inv"] > merged_df["Tran Date_po"]]
 
     st.markdown(f"**Total Transactions:** {len(filtered_invoice)}")
 
     if filtered_invoice.empty:
         st.info("No transactions match the criteria.")
     else:
-        display_cols = ["Tran No", "Particulars_po", "Total_po", "Invoice Print Date", "Converted", "Posted"]
+        display_cols = ["Tran No", "Particulars_po", "Total_po", "Invoice Print Date_inv", "Converted", "Posted"]
         st.dataframe(
-            filtered_invoice[display_cols].sort_values(by="Invoice Print Date", ascending=False),
+            filtered_invoice[display_cols].sort_values(by="Invoice Print Date_inv", ascending=False),
             use_container_width=True,
             height=600
         )
