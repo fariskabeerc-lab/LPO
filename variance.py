@@ -5,11 +5,11 @@ import plotly.express as px
 # ---------------------------
 # Load datasets
 # ---------------------------
-df = pd.read_excel("transactions.xlsx")
-invoice_df = pd.read_excel("invoice_list.xlsx")
+df = pd.read_excel("transactions.xlsx")      # PO file
+invoice_df = pd.read_excel("invoice_list.xlsx")  # Invoice file
 
 # ---------------------------
-# Clean column names (remove spaces, newlines, carriage returns)
+# Clean column names
 # ---------------------------
 df.columns = df.columns.str.strip().str.replace("\n", "").str.replace("\r", "")
 invoice_df.columns = invoice_df.columns.str.strip().str.replace("\n", "").str.replace("\r", "")
@@ -110,12 +110,10 @@ if page == "Invoice Analysis":
     st.title("📄 Transactions with Invoices Not Yet Converted")
 
     # Ensure date columns are datetime
-    if "Tran Date" in df.columns:
-        df["Tran Date"] = pd.to_datetime(df["Tran Date"], errors="coerce")
-    if "Invoice Print Date" in invoice_df.columns:
-        invoice_df["Invoice Print Date"] = pd.to_datetime(invoice_df["Invoice Print Date"], errors="coerce")
+    df["Tran Date"] = pd.to_datetime(df["Tran Date"], errors="coerce")
+    invoice_df["Invoice Print Date"] = pd.to_datetime(invoice_df["Invoice Print Date"], errors="coerce")
 
-    # Merge invoice with transactions on 'Tran No' (adjust key if needed)
+    # Merge on Tran No
     merged_df = pd.merge(
         invoice_df,
         df,
@@ -127,18 +125,18 @@ if page == "Invoice Analysis":
     merged_df.columns = merged_df.columns.str.strip()
 
     # Ensure required columns exist
-    required_columns = ["Posted_po", "Converted_po", "Invoice Print Date", "Tran Date_po"]
+    required_columns = ["Posted_po", "Converted_po", "Invoice Print Date", "Tran Date_po", "Particulars_po", "Total_po"]
     for col in required_columns:
         if col not in merged_df.columns:
             st.error(f"Column '{col}' not found in merged dataframe. Check your Excel files.")
             st.stop()
 
-    # Convert dates to datetime and drop missing
+    # Convert dates and drop missing
     merged_df["Invoice Print Date"] = pd.to_datetime(merged_df["Invoice Print Date"], errors="coerce")
     merged_df["Tran Date_po"] = pd.to_datetime(merged_df["Tran Date_po"], errors="coerce")
     merged_df = merged_df.dropna(subset=["Invoice Print Date", "Tran Date_po"])
 
-    # Filter: PO checked, Converted unchecked, Invoice after PO date
+    # Filter: PO Checked, Converted Unchecked, Invoice after PO date
     filtered_invoice = merged_df[
         (merged_df["Posted_po"] == "Checked") &
         (merged_df["Converted_po"] == "Unchecked") &
@@ -150,7 +148,7 @@ if page == "Invoice Analysis":
     if filtered_invoice.empty:
         st.info("No transactions match the criteria.")
     else:
-        display_cols = [col for col in ["Tran No", "Particulars", "Total_po", "Invoice Print Date", "Converted_po", "Posted_po"] if col in filtered_invoice.columns]
+        display_cols = [col for col in ["Tran No", "Particulars_po", "Total_po", "Invoice Print Date", "Converted_po", "Posted_po"] if col in filtered_invoice.columns]
         st.dataframe(
             filtered_invoice[display_cols].sort_values(by="Invoice Print Date", ascending=False),
             use_container_width=True,
