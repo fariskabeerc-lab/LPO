@@ -138,92 +138,54 @@ if page == "Invoice Analysis":
 
     # Apply matching
     invoice_matches = po_filtered.apply(lambda r: match_invoice(r, invoice_df), axis=1)
+
+    # Combine PO + Invoice info
     po_with_invoice = pd.concat([po_filtered.reset_index(drop=True), invoice_matches], axis=1)
 
     # Keep only POs that have matching invoices
     filtered_invoice = po_with_invoice[po_with_invoice["Invoice Tran No"].notnull()]
 
     # ---------------------------
-    # Key Insights (filtered only)
+    # Key metrics
     # ---------------------------
-    if filtered_invoice.empty:
-        st.info("No transactions match the criteria.")
-    else:
-        total_po_value = filtered_invoice["Total"].sum()
-        total_invoice_value = filtered_invoice["Invoice Total"].sum()
-        total_transactions_filtered = len(filtered_invoice)
-        total_transactions_all = len(po_filtered)
+    total_po_value = filtered_invoice["Total"].sum()
+    total_invoice_value = filtered_invoice["Invoice Total"].sum()
+    total_transactions_filtered = len(filtered_invoice)
+    total_transactions_all = len(po_filtered)
 
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("💰 Total PO Value", f"{total_po_value:,.2f}")
-        with col2:
-            st.metric("🧾 Total Transactions", total_transactions_filtered)
-        with col3:
-            st.metric("💳 Total Invoice Value", f"{total_invoice_value:,.2f}")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("💰 Total PO Value", f"{total_po_value:,.2f}")
+    with col2:
+        st.metric("🧾 Total Transactions", total_transactions_filtered)
+    with col3:
+        st.metric("💳 Total Invoice Value", f"{total_invoice_value:,.2f}")
 
-        st.markdown(
-            f"**Total PO Transactions:** {total_transactions_all}  |  "
-            f"**Filtered Transactions:** {total_transactions_filtered}"
-        )
+    st.markdown(
+        f"**Total PO Transactions:** {total_transactions_all}  |  "
+        f"**Filtered Transactions:** {total_transactions_filtered}"
+    )
 
-        # ---------------------------
-        # Combined PO vs Invoice bar chart
-        # ---------------------------
-        st.subheader("PO vs Invoice Totals by Particulars (Top 30)")
-        df_compare = (
-            filtered_invoice.groupby("Particulars")[["Total", "Invoice Total"]]
-            .sum()
-            .reset_index()
-            .sort_values(by="Total", ascending=False)
-            .head(30)
-        )
+    # ---------------------------
+    # Display table with all PO + Invoice columns
+    # ---------------------------
+    display_cols = [
+        "Tran No",              # PO Tran No
+        "Tran Date",            # PO Tran Date
+        "Created Date",         # PO Created Date
+        "Particulars",          # PO Particulars
+        "Total",                # PO Total
+        "Converted",            # PO Converted
+        "Posted",               # PO Posted
+        "Invoice Tran No",      # Invoice Tran No
+        "Invoice Particulars",  # Invoice Particulars
+        "Invoice Total",        # Invoice Total
+        "Invoice Created Date"  # Invoice Created Date
+    ]
 
-        df_melt = df_compare.melt(id_vars="Particulars", value_vars=["Total", "Invoice Total"],
-                                  var_name="Type", value_name="Value")
-
-        fig2 = px.bar(
-            df_melt,
-            x="Value",
-            y="Particulars",
-            color="Type",
-            orientation="h",
-            barmode="group",
-            text="Value",
-            color_discrete_map={"Total": "teal", "Invoice Total": "orange"}
-        )
-        fig2.update_traces(texttemplate="%{text:,.2f}", textposition="outside")
-        fig2.update_layout(
-            xaxis_title="Value",
-            yaxis_title="Particulars",
-            yaxis=dict(autorange="reversed"),
-            plot_bgcolor="#1e1e1e",
-            paper_bgcolor="#1e1e1e",
-            font=dict(color="white"),
-            height=800
-        )
-        st.plotly_chart(fig2, use_container_width=True)
-
-        # ---------------------------
-        # Display filtered invoice table with PO + Invoice details
-        # ---------------------------
-        display_cols = [
-            "Tran No",              # PO Tran No
-            "Tran Date",            # PO Tran Date
-            "Created Date",         # PO Created Date
-            "Particulars",          # PO Particulars
-            "Total",                # PO Total
-            "Converted",            # PO Converted
-            "Posted",               # PO Posted
-            "Invoice Tran No",      # Invoice Tran No
-            "Invoice Particulars",  # Invoice Particulars
-            "Invoice Total",        # Invoice Total
-            "Invoice Created Date"  # Invoice Created Date
-        ]
-
-        st.subheader("Filtered Invoice Transactions (PO + Invoice Details)")
-        st.dataframe(
-            filtered_invoice[display_cols].sort_values(by="Invoice Created Date", ascending=False),
-            use_container_width=True,
-            height=600
-        )
+    st.subheader("Filtered Invoice Transactions (PO + Invoice Details)")
+    st.dataframe(
+        filtered_invoice[display_cols].sort_values(by="Invoice Created Date", ascending=False),
+        use_container_width=True,
+        height=600
+    )
