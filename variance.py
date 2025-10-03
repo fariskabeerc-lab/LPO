@@ -1,12 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
-
-# ---------------------------
-# Page Config
-# ---------------------------
-st.set_page_config(page_title="Transaction & Invoice Dashboard", layout="wide")
 
 # ---------------------------
 # Load datasets
@@ -14,7 +8,9 @@ st.set_page_config(page_title="Transaction & Invoice Dashboard", layout="wide")
 df = pd.read_excel("transactions.xlsx")      # PO dataset
 invoice_df = pd.read_excel("invoice_list.xlsx")  # Invoice dataset
 
+# ---------------------------
 # Clean column names
+# ---------------------------
 df.columns = df.columns.str.strip().str.replace("\n", "").str.replace("\r", "")
 invoice_df.columns = invoice_df.columns.str.strip().str.replace("\n", "").str.replace("\r", "")
 
@@ -27,18 +23,19 @@ page = st.sidebar.radio("📑 Select Page", ["Transactions Dashboard", "Invoice 
 # Transactions Dashboard
 # ---------------------------
 if page == "Transactions Dashboard":
+    st.set_page_config(page_title="Transaction Dashboard", layout="wide")
     st.title("📊 Transaction Dashboard")
 
     # Sidebar Filters
     st.sidebar.header("Filters")
     po_status = st.sidebar.selectbox(
-        "PO Status", 
-        options=["All"] + sorted(df["Posted"].dropna().unique().tolist()), 
+        "PO Status",
+        options=["All"] + sorted(df["Posted"].dropna().unique().tolist()),
         index=0
     )
     converted_status = st.sidebar.selectbox(
-        "Converted Status", 
-        options=["All"] + sorted(df["Converted"].fillna("Unchecked").unique().tolist()), 
+        "Converted Status",
+        options=["All"] + sorted(df["Converted"].dropna().unique().tolist()),
         index=0
     )
 
@@ -54,7 +51,7 @@ if page == "Transactions Dashboard":
     # ---------------------------
     total_sum_filtered = df_filtered["Total"].sum()
     total_count_filtered = len(df_filtered)
-    total_qty_filtered = df_filtered.get("Total Qty", pd.Series([0])).sum()
+    total_qty_filtered = df_filtered["Total Qty"].sum() if "Total Qty" in df_filtered.columns else 0
 
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -98,23 +95,20 @@ if page == "Transactions Dashboard":
     st.plotly_chart(fig, use_container_width=True)
 
     # ---------------------------
-    # Full table (dark mode)
+    # Full table
     # ---------------------------
     st.subheader("Filtered Transactions Table")
-    gb = GridOptionsBuilder.from_dataframe(df_filtered)
-    gb.configure_default_column(
-        cellStyle=JsCode("""
-        function(params) {
-            return {'color': 'white', 'backgroundColor': '#1e1e1e'};
-        }
-        """)
+    st.dataframe(
+        df_filtered[["Tran No", "Tran Date", "Particulars", "Total", "Discount", "Net Total", "Total Qty", "Posted", "Converted"]],
+        use_container_width=True,
+        height=600
     )
-    AgGrid(df_filtered, gridOptions=gb.build(), height=600)
 
 # ---------------------------
 # Invoice Analysis
 # ---------------------------
 if page == "Invoice Analysis":
+    st.set_page_config(page_title="Invoices Not Converted", layout="wide")
     st.title("📄 Transactions with Invoices Not Yet Converted")
 
     # Filter POs: Posted = Checked, Converted = Unchecked
@@ -124,27 +118,33 @@ if page == "Invoice Analysis":
     po_filtered["Total"] = pd.to_numeric(po_filtered["Total"], errors="coerce")
     invoice_df["Total"] = pd.to_numeric(invoice_df["Total"], errors="coerce")
 
-    # Merge POs with invoices after PO created date
-    invoice_df_renamed = invoice_df.rename(columns={
-        "Tran No": "Invoice Tran No",
-        "Created Date": "Invoice Created Date",
-        "Total": "Invoice Total",
-        "Particulars": "Invoice Particulars"
-    })
+    # Match invoices with same Particulars and Created Date after PO
+    def match_invoice(row, inv_df):
+        matches = inv_df[(inv_df["Particulars"] == row["Particulars"]) & (inv_df["Created Date"] > row["Created Date"])]
+        if not matches.empty:
+            inv_row = matches.iloc[0]
+            return pd.Series({
+                "Invoice Tran No": inv_row["Tran No"],
+                "Invoice Created Date": inv_row["Created Date"],
+                "Invoice Total": inv_row["Total"],
+                "Invoice Particulars": inv_row["Particulars"]
+            })
+        else:
+            return pd.Series({
+                "Invoice Tran No": None,
+                "Invoice Created Date": None,
+                "Invoice Total": None,
+                "Invoice Particulars": None
+            })
 
-    merged_df = po_filtered.merge(
-        invoice_df_renamed,
-        left_on="Particulars",
-        right_on="Invoice Particulars",
-        how="left"
-    )
-    merged_df = merged_df[merged_df["Invoice Created Date"] > merged_df["Created Date"]]
+    invoice_matches = po_filtered.apply(lambda r: match_invoice(r, invoice_df), axis=1)
+    po_with_invoice = pd.concat([po_filtered.reset_index(drop=True), invoice_matches], axis=1)
 
-    # Keep only POs with matching invoices
-    filtered_invoice = merged_df[merged_df["Invoice Tran No"].notnull()]
+    # Keep only POs that have matching invoices
+    filtered_invoice = po_with_invoice[po_with_invoice["Invoice Tran No"].notnull()]
 
     # ---------------------------
-    # Key Insights
+    # Key Insights (filtered only)
     # ---------------------------
     if filtered_invoice.empty:
         st.info("No transactions match the criteria.")
@@ -165,27 +165,15 @@ if page == "Invoice Analysis":
         st.markdown(f"**Total PO Transactions:** {total_transactions_all} | **Filtered Transactions:** {total_transactions_filtered}")
 
         # ---------------------------
-        # Display filtered invoice table (dark mode)
+        # Display filtered invoice table
         # ---------------------------
         display_cols = [
-            "Tran No",
-            "Invoice Tran No",
-            "Particulars",
-            "Invoice Particulars",
-            "Total",
-            "Invoice Total",
-            "Created Date",
-            "Invoice Created Date",
-            "Converted",
-            "Posted"
+            "Tran No", "Invoice Tran No", "Particulars", "Invoice Particulars",
+            "Total", "Invoice Total", "Created Date", "Invoice Created Date", "Converted", "Posted"
         ]
         st.subheader("Filtered Invoice Transactions")
-        gb_inv = GridOptionsBuilder.from_dataframe(filtered_invoice[display_cols].sort_values(by="Invoice Created Date", ascending=False))
-        gb_inv.configure_default_column(
-            cellStyle=JsCode("""
-            function(params) {
-                return {'color': 'white', 'backgroundColor': '#1e1e1e'};
-            }
-            """)
+        st.dataframe(
+            filtered_invoice[display_cols].sort_values(by="Invoice Created Date", ascending=False),
+            use_container_width=True,
+            height=600
         )
-        AgGrid(filtered_invoice[display_cols].sort_values(by="Invoice Created Date", ascending=False), gridOptions=gb_inv.build(), height=600)
