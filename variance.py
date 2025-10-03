@@ -5,8 +5,8 @@ import plotly.express as px
 # ---------------------------
 # Load datasets
 # ---------------------------
-df = pd.read_excel("transactions.xlsx")      # PO file
-invoice_df = pd.read_excel("invoice_list.xlsx")  # Invoice file
+df = pd.read_excel("transactions.xlsx")         # PO file
+invoice_df = pd.read_excel("invoice_list.xlsx") # Invoice file
 
 # ---------------------------
 # Clean column names
@@ -23,8 +23,9 @@ invoice_df["Tran No"] = invoice_df["Tran No"].astype(str).str.strip()
 df["Created Date"] = pd.to_datetime(df["Created Date"], errors="coerce")
 invoice_df["Created Date"] = pd.to_datetime(invoice_df["Created Date"], errors="coerce")
 
-df["Supplier"] = df["Particulars"]  # Replace with actual supplier column if exists
-invoice_df["Supplier"] = invoice_df["Particulars"]  # Replace with actual supplier column if exists
+# Optional: If Supplier column exists, replace 'Supplier' below
+df["Supplier"] = df["Particulars"]         
+invoice_df["Supplier"] = invoice_df["Particulars"]  
 
 # ---------------------------
 # Sidebar Page Selection
@@ -121,18 +122,18 @@ if page == "Invoice Analysis":
     st.set_page_config(page_title="Invoices Not Converted", layout="wide")
     st.title("📄 Transactions with Invoices Not Yet Converted")
 
-    # Filter PO for Unchecked Converted
+    # Filter POs: Unchecked Converted
     po_unconverted = df[df["Converted"] == "Unchecked"]
 
-    # Merge PO with invoice list on Supplier + Particulars
+    # Merge on Supplier + Particulars
     merged_df = pd.merge(
         po_unconverted,
         invoice_df,
-        on=["Supplier", "Particulars"],  # adjust columns if you have separate Supplier column
+        on=["Supplier", "Particulars"],
         suffixes=("_po", "_inv")
     )
 
-    # Filter: Invoice Created Date after PO Created Date
+    # Filter invoices created after PO Created Date
     filtered_invoice = merged_df[merged_df["Created Date_inv"] > merged_df["Created Date_po"]]
 
     st.markdown(f"**Total Transactions:** {len(filtered_invoice)}")
@@ -141,8 +142,13 @@ if page == "Invoice Analysis":
         st.info("No transactions match the criteria.")
     else:
         display_cols = [
-            "Tran No", "Particulars", "Total_po", "Created Date_po", 
-            "Created Date_inv", "Converted", "Posted"
+            "Tran No_po",
+            "Particulars",
+            "Total_po",
+            "Created Date_po",
+            "Created Date_inv",
+            "Converted",
+            "Posted_po"
         ]
         st.dataframe(
             filtered_invoice[display_cols].sort_values(by="Created Date_inv", ascending=False),
