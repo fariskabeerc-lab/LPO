@@ -64,48 +64,30 @@ if page == "Transactions Dashboard":
     st.markdown(f"**Total Transactions in Dataset:** {len(df)}  |  **Filtered Transactions:** {total_count_filtered}")
 
     # ---------------------------
-    # Top 30 Transactions by Total Value
+    # Top 30 Transactions & Particulars Combined
     # ---------------------------
-    st.subheader("Top 30 Transactions by Total Value")
-    df_top30 = df_filtered.sort_values(by="Total", ascending=False).head(30)
-    fig1 = px.bar(
-        df_top30,
-        x="Total",
-        y="Particulars",
-        orientation="h",
-        text="Total",
-        hover_data=["Tran No", "Tran Date", "Discount", "Net Total"],
-        color_discrete_sequence=["teal"]
-    )
-    fig1.update_traces(texttemplate="%{text:,.2f}", textposition="outside", marker=dict(line=dict(width=1, color="white")))
-    fig1.update_layout(
-        xaxis_title="Total Value",
-        yaxis_title="Particulars",
-        yaxis=dict(autorange="reversed"),
-        xaxis=dict(gridcolor="gray"),
-        height=800,
-        plot_bgcolor="#1e1e1e",
-        paper_bgcolor="#1e1e1e",
-        font=dict(color="white")
-    )
-    st.plotly_chart(fig1, use_container_width=True)
+    st.subheader("Top 30 Transactions / Particulars by Total Value")
 
-    # ---------------------------
-    # Top 30 Particulars by Total Value
-    # ---------------------------
-    st.subheader("Top 30 Particulars by Total Value")
+    # Aggregate totals by Particulars and take top 30
     top30_particulars = df_filtered.groupby("Particulars", as_index=False)["Total"].sum()
     top30_particulars = top30_particulars.sort_values(by="Total", ascending=False).head(30)
-    fig2 = px.bar(
-        top30_particulars,
+
+    # Merge to get first transaction number for hover info
+    first_tran = df_filtered.groupby("Particulars")["Tran No"].first().reset_index()
+    top30 = pd.merge(top30_particulars, first_tran, on="Particulars", how="left")
+
+    fig = px.bar(
+        top30,
         x="Total",
         y="Particulars",
         orientation="h",
         text="Total",
-        color_discrete_sequence=["orange"]
+        hover_data=["Tran No"],
+        color_discrete_sequence=["teal"]
     )
-    fig2.update_traces(texttemplate="%{text:,.2f}", textposition="outside", marker=dict(line=dict(width=1, color="white")))
-    fig2.update_layout(
+
+    fig.update_traces(texttemplate="%{text:,.2f}", textposition="outside", marker=dict(line=dict(width=1, color="white")))
+    fig.update_layout(
         xaxis_title="Total Value",
         yaxis_title="Particulars",
         yaxis=dict(autorange="reversed"),
@@ -115,7 +97,8 @@ if page == "Transactions Dashboard":
         paper_bgcolor="#1e1e1e",
         font=dict(color="white")
     )
-    st.plotly_chart(fig2, use_container_width=True)
+
+    st.plotly_chart(fig, use_container_width=True)
 
     # ---------------------------
     # Full table
