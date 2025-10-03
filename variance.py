@@ -38,7 +38,7 @@ with col3:
     st.metric("📦 Total Quantity", f"{total_qty:,.0f}")
 
 # ---------------------------
-# Horizontal Bar Chart (Simple)
+# Horizontal Bar Chart
 # ---------------------------
 st.subheader("Top 30 Transactions by Total Value")
 
@@ -61,13 +61,15 @@ fig.update_traces(
 fig.update_layout(
     xaxis_title="Total Value",
     yaxis_title="Particulars",
-    yaxis=dict(autorange="reversed"),  # Largest on top
-    height=800,  # Large enough for readability
+    yaxis=dict(
+        autorange="reversed",  # Largest total on top
+        gridcolor="gray"
+    ),
+    xaxis=dict(gridcolor="gray"),
+    height=800,
     plot_bgcolor="#1e1e1e",
     paper_bgcolor="#1e1e1e",
-    font=dict(color="white"),
-    xaxis=dict(gridcolor="gray"),
-    yaxis=dict(gridcolor="gray")
+    font=dict(color="white")
 )
 
 st.plotly_chart(fig, use_container_width=True)
@@ -84,4 +86,3 @@ st.dataframe(
     use_container_width=True,
     height=500
 )
-
