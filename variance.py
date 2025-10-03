@@ -105,11 +105,11 @@ if page == "Transactions Dashboard":
     )
 
 # ---------------------------
-# Invoice Analysis
+# Invoice Analysis (PO Details Only)
 # ---------------------------
 if page == "Invoice Analysis":
-    st.set_page_config(page_title="Invoices Not Converted", layout="wide")
-    st.title("📄Invoice Done Without Checking")
+    st.set_page_config(page_title="PO Details for Matched Invoices", layout="wide")
+    st.title("📄 PO Details for Transactions with Invoices")
 
     # Filter POs: Posted = Checked, Converted = Unchecked
     po_filtered = df[(df["Posted"] == "Checked") & (df["Converted"] == "Unchecked")].copy()
@@ -122,58 +122,18 @@ if page == "Invoice Analysis":
     def match_invoice(row, inv_df):
         matches = inv_df[(inv_df["Particulars"] == row["Particulars"]) & (inv_df["Created Date"] > row["Created Date"])]
         if not matches.empty:
-            inv_row = matches.iloc[0]
-            return pd.Series({
-                "Invoice Tran No": inv_row["Tran No"],
-                "Invoice Created Date": inv_row["Created Date"],
-                "Invoice Total": inv_row["Total"],
-                "Invoice Particulars": inv_row["Particulars"]
-            })
+            return True  # Match found
         else:
-            return pd.Series({
-                "Invoice Tran No": None,
-                "Invoice Created Date": None,
-                "Invoice Total": None,
-                "Invoice Particulars": None
-            })
-
-    invoice_matches = po_filtered.apply(lambda r: match_invoice(r, invoice_df), axis=1)
-    po_with_invoice = pd.concat([po_filtered.reset_index(drop=True), invoice_matches], axis=1)
+            return False
 
     # Keep only POs that have matching invoices
-    filtered_invoice = po_with_invoice[po_with_invoice["Invoice Tran No"].notnull()]
+    po_with_invoice = po_filtered[po_filtered.apply(lambda r: match_invoice(r, invoice_df), axis=1)]
 
-    # ---------------------------
-    # Key Insights (filtered only)
-    # ---------------------------
-    if filtered_invoice.empty:
-        st.info("No transactions match the criteria.")
-    else:
-        total_po_value = filtered_invoice["Total"].sum()
-        total_invoice_value = filtered_invoice["Invoice Total"].sum()
-        total_transactions_filtered = len(filtered_invoice)
-        total_transactions_all = len(po_filtered)
-
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("💰 Total PO Value", f"{total_po_value:,.2f}")
-        with col2:
-            st.metric("🧾 Total Transactions", total_transactions_filtered)
-        with col3:
-            st.metric("💳 Total Invoice Value", f"{total_invoice_value:,.2f}")
-
-        st.markdown(f"**Total PO Transactions:** {total_transactions_all} | **Filtered Transactions:** {total_transactions_filtered}")
-
-        # ---------------------------
-        # Display filtered invoice table
-        # ---------------------------
-        display_cols = [
-            "Tran No", "Invoice Tran No", "Particulars", "Invoice Particulars",
-            "Total", "Invoice Total", "Created Date", "Invoice Created Date", "Converted", "Posted"
-        ]
-        st.subheader("Filtered Invoice Transactions")
-        st.dataframe(
-            filtered_invoice[display_cols].sort_values(by="Invoice Created Date", ascending=False),
-            use_container_width=True,
-            height=600
-        )
+    # Display PO details only
+    display_cols = ["Tran No", "Particulars", "Total", "Created Date", "Posted", "Converted"]
+    st.subheader("PO Details for Matched Invoices")
+    st.dataframe(
+        po_with_invoice[display_cols].sort_values(by="Created Date", ascending=False),
+        use_container_width=True,
+        height=600
+    )
