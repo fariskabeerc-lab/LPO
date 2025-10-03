@@ -9,41 +9,44 @@ df = pd.read_excel("transactions.xlsx")
 # df = pd.read_csv("transactions.csv")
 
 # ---------------------------
-# Top 30 transactions by Total
+# Metrics based on full dataset
 # ---------------------------
-df_sorted = df.sort_values(by="Total", ascending=False).head(30)
+total_sum_all = df["Total"].sum()
+total_count_all = len(df)
+total_qty_all = df["Total Qty"].sum() if "Total Qty" in df.columns else 0
+
+# ---------------------------
+# Top 30 transactions by Total for graph
+# ---------------------------
+df_top30 = df.sort_values(by="Total", ascending=False).head(30)
 
 # ---------------------------
 # Dashboard Title
 # ---------------------------
 st.set_page_config(page_title="Transaction Dashboard", layout="wide")
-st.title("📊 Transaction Dashboard - Top 30 Transactions")
+st.title("📊 Transaction Dashboard")
 
 # ---------------------------
-# Key Metrics
+# Key Metrics (full data)
 # ---------------------------
-total_sum = df_sorted["Total"].sum()
-total_count = len(df_sorted)
-total_qty = df_sorted["Total Qty"].sum() if "Total Qty" in df_sorted.columns else 0
-
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.metric("💰 Sum of Total", f"{total_sum:,.2f}")
+    st.metric("💰 Sum of Total", f"{total_sum_all:,.2f}")
 
 with col2:
-    st.metric("🧾 Number of Transactions", total_count)
+    st.metric("🧾 Number of Transactions", total_count_all)
 
 with col3:
-    st.metric("📦 Total Quantity", f"{total_qty:,.0f}")
+    st.metric("📦 Total Quantity", f"{total_qty_all:,.0f}")
 
 # ---------------------------
-# Horizontal Bar Chart
+# Horizontal Bar Chart (top 30)
 # ---------------------------
 st.subheader("Top 30 Transactions by Total Value")
 
 fig = px.bar(
-    df_sorted,
+    df_top30,
     x="Total",
     y="Particulars",
     orientation="h",
@@ -75,14 +78,14 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 
 # ---------------------------
-# Top 30 Transactions Table
+# Full Transactions Table
 # ---------------------------
-st.subheader("Top 30 Detailed Transactions Table")
+st.subheader("All Transactions Table")
 
 st.dataframe(
-    df_sorted[
+    df[
         ["Tran No", "Tran Date", "Particulars", "Total", "Discount", "Net Total", "Total Qty"]
     ],
     use_container_width=True,
-    height=500
+    height=600
 )
