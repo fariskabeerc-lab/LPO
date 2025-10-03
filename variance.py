@@ -11,21 +11,18 @@ invoice_df = pd.read_excel("invoice_list.xlsx") # Invoice file
 # ---------------------------
 # Clean column names
 # ---------------------------
-df.columns = df.columns.str.strip().str.replace("\n", "").str.replace("\r", "")
-invoice_df.columns = invoice_df.columns.str.strip().str.replace("\n", "").str.replace("\r", "")
+def clean_cols(df):
+    df.columns = df.columns.str.strip().str.replace("\n", "").str.replace("\r", "")
+    return df
+
+df = clean_cols(df)
+invoice_df = clean_cols(invoice_df)
 
 # ---------------------------
 # Convert necessary columns
 # ---------------------------
-df["Tran No"] = df["Tran No"].astype(str).str.strip()
-invoice_df["Tran No"] = invoice_df["Tran No"].astype(str).str.strip()
-
 df["Created Date"] = pd.to_datetime(df["Created Date"], errors="coerce")
 invoice_df["Created Date"] = pd.to_datetime(invoice_df["Created Date"], errors="coerce")
-
-# Optional: If Supplier column exists, replace 'Supplier' below
-df["Supplier"] = df["Particulars"]         
-invoice_df["Supplier"] = invoice_df["Particulars"]  
 
 # ---------------------------
 # Sidebar Page Selection
@@ -33,7 +30,7 @@ invoice_df["Supplier"] = invoice_df["Particulars"]
 page = st.sidebar.radio("📑 Select Page", ["Transactions Dashboard", "Invoice Analysis"])
 
 # ---------------------------
-# Transactions Dashboard Page
+# Transactions Dashboard
 # ---------------------------
 if page == "Transactions Dashboard":
     st.set_page_config(page_title="Transaction Dashboard", layout="wide")
@@ -116,20 +113,20 @@ if page == "Transactions Dashboard":
     )
 
 # ---------------------------
-# Invoice Analysis Page
+# Invoice Analysis
 # ---------------------------
 if page == "Invoice Analysis":
     st.set_page_config(page_title="Invoices Not Converted", layout="wide")
     st.title("📄 Transactions with Invoices Not Yet Converted")
 
-    # Filter POs: Unchecked Converted
+    # Filter POs: Converted = Unchecked
     po_unconverted = df[df["Converted"] == "Unchecked"]
 
-    # Merge on Supplier + Particulars
+    # Merge on Particulars only (ignore Tran No and Supplier)
     merged_df = pd.merge(
         po_unconverted,
         invoice_df,
-        on=["Supplier", "Particulars"],
+        on=["Particulars"],
         suffixes=("_po", "_inv")
     )
 
@@ -147,7 +144,7 @@ if page == "Invoice Analysis":
             "Total_po",
             "Created Date_po",
             "Created Date_inv",
-            "Converted",
+            "Converted_po",
             "Posted_po"
         ]
         st.dataframe(
