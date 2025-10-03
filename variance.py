@@ -57,6 +57,10 @@ if page == "Transactions Dashboard":
         df_filtered = df_filtered[df_filtered["Converted"] == converted_status]
 
     # Metrics
+    total_sum_all = df["Total"].sum()
+    total_count_all = len(df)
+    total_qty_all = df["Total Qty"].sum() if "Total Qty" in df.columns else 0
+
     total_sum_filtered = df_filtered["Total"].sum()
     total_count_filtered = len(df_filtered)
     total_qty_filtered = df_filtered["Total Qty"].sum() if "Total Qty" in df_filtered.columns else 0
@@ -68,6 +72,8 @@ if page == "Transactions Dashboard":
         st.metric("🧾 Number of Transactions", total_count_filtered)
     with col3:
         st.metric("📦 Total Quantity", f"{total_qty_filtered:,.0f}")
+
+    st.markdown(f"**Total Transactions in dataset:** {total_count_all}  |  **Filtered Transactions:** {total_count_filtered}")
 
     # Top 30 transactions
     df_top30 = df_filtered.sort_values(by="Total", ascending=False).head(30)
@@ -122,7 +128,7 @@ if page == "Invoice Analysis":
     # Filter POs: Posted = Checked and Converted = Unchecked
     po_filtered = df[(df["Posted"] == "Checked") & (df["Converted"] == "Unchecked")]
 
-    # Merge on Particulars only (ignore Tran No)
+    # Merge on Particulars only
     merged_df = pd.merge(
         po_filtered,
         invoice_df,
@@ -134,25 +140,31 @@ if page == "Invoice Analysis":
     filtered_invoice = merged_df[merged_df["Created Date_inv"] > merged_df["Created Date_po"]]
 
     # ---------------------------
-    # Key Insights (calculated only on filtered_invoice)
+    # Key Insights (from filtered_invoice)
     # ---------------------------
     if filtered_invoice.empty:
         st.info("No transactions match the criteria.")
     else:
-        # Metrics based on filtered_invoice
-        total_transactions = len(filtered_invoice)
+        # Ensure numeric columns
+        filtered_invoice["Total_po"] = pd.to_numeric(filtered_invoice["Total_po"], errors="coerce")
+        filtered_invoice["Total_inv"] = pd.to_numeric(filtered_invoice["Total_inv"], errors="coerce")
+
         total_po_value = filtered_invoice["Total_po"].sum()
-        total_invoice_value = filtered_invoice["Total_inv"].sum() if "Total_inv" in filtered_invoice.columns else 0
+        total_invoice_value = filtered_invoice["Total_inv"].sum()
+        total_transactions_filtered = len(filtered_invoice)
+        total_transactions_all = len(po_filtered)
 
         col1, col2, col3 = st.columns(3)
         with col1:
             st.metric("💰 Total PO Value", f"{total_po_value:,.2f}")
         with col2:
-            st.metric("🧾 Total Transactions", total_transactions)
+            st.metric("🧾 Total Transactions", total_transactions_filtered)
         with col3:
             st.metric("💳 Total Invoice Value", f"{total_invoice_value:,.2f}")
 
-        # Display table
+        st.markdown(f"**Total PO Transactions:** {total_transactions_all}  |  **Filtered Transactions:** {total_transactions_filtered}")
+
+        # Display filtered invoice table
         display_cols = [
             "Tran No_po",
             "Tran No_inv",
