@@ -105,7 +105,7 @@ if page == "Transactions Dashboard":
 # ---------------------------
 if page == "Invoice Analysis":
     st.set_page_config(page_title="Invoices Not Converted", layout="wide")
-    st.title("📄 Transactions with Invoices Not Yet Converted")
+    st.title("📄Invoices Not Converted")
 
     # Filter POs: Posted = Checked, Converted = Unchecked
     po_filtered = df[(df["Posted"] == "Checked") & (df["Converted"] == "Unchecked")].copy()
