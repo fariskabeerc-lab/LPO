@@ -114,78 +114,72 @@ if page == "Invoice Analysis":
     po_filtered["Total"] = pd.to_numeric(po_filtered["Total"], errors="coerce")
     invoice_df["Total"] = pd.to_numeric(invoice_df["Total"], errors="coerce")
 
-    # Match invoices with same Particulars and Created Date after PO
-    def match_invoice(row, inv_df):
-        matches = inv_df[
-            (inv_df["Particulars"] == row["Particulars"]) &
-            (inv_df["Created Date"] > row["Created Date"])
+    # ---------------------------
+    # Match all invoices for each PO (multiple invoices allowed)
+    # ---------------------------
+    po_list = []
+    for _, po_row in po_filtered.iterrows():
+        matches = invoice_df[
+            (invoice_df["Particulars"] == po_row["Particulars"]) &
+            (invoice_df["Created Date"] > po_row["Created Date"])
         ]
         if not matches.empty:
-            inv_row = matches.iloc[0]
-            return pd.Series({
-                "Invoice Tran No": inv_row["Tran No"],
-                "Invoice Created Date": inv_row["Created Date"],
-                "Invoice Total": inv_row["Total"],
-                "Invoice Particulars": inv_row["Particulars"]
-            })
-        else:
-            return pd.Series({
-                "Invoice Tran No": None,
-                "Invoice Created Date": None,
-                "Invoice Total": None,
-                "Invoice Particulars": None
-            })
+            for _, inv_row in matches.iterrows():
+                combined = po_row.to_dict()
+                combined.update({
+                    "Invoice Tran No": inv_row["Tran No"],
+                    "Invoice Created Date": inv_row["Created Date"],
+                    "Invoice Total": inv_row["Total"],
+                    "Invoice Particulars": inv_row["Particulars"]
+                })
+                po_list.append(combined)
 
-    # Apply matching
-    invoice_matches = po_filtered.apply(lambda r: match_invoice(r, invoice_df), axis=1)
+    filtered_invoice = pd.DataFrame(po_list)
 
-    # Combine PO + Invoice info
-    po_with_invoice = pd.concat([po_filtered.reset_index(drop=True), invoice_matches], axis=1)
+    if filtered_invoice.empty:
+        st.info("No transactions match the criteria.")
+    else:
+        # ---------------------------
+        # Key metrics
+        # ---------------------------
+        total_po_value = filtered_invoice["Total"].sum()
+        total_invoice_value = filtered_invoice["Invoice Total"].sum()
+        total_transactions_filtered = len(filtered_invoice)
+        total_transactions_all = len(po_filtered)
 
-    # Keep only POs that have matching invoices
-    filtered_invoice = po_with_invoice[po_with_invoice["Invoice Tran No"].notnull()]
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("💰 Total PO Value", f"{total_po_value:,.2f}")
+        with col2:
+            st.metric("🧾 Total Transactions", total_transactions_filtered)
+        with col3:
+            st.metric("💳 Total Invoice Value", f"{total_invoice_value:,.2f}")
 
-    # ---------------------------
-    # Key metrics
-    # ---------------------------
-    total_po_value = filtered_invoice["Total"].sum()
-    total_invoice_value = filtered_invoice["Invoice Total"].sum()
-    total_transactions_filtered = len(filtered_invoice)
-    total_transactions_all = len(po_filtered)
+        st.markdown(
+            f"**Total PO Transactions:** {total_transactions_all}  |  "
+            f"**Filtered Transactions:** {total_transactions_filtered}"
+        )
 
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("💰 Total PO Value", f"{total_po_value:,.2f}")
-    with col2:
-        st.metric("🧾 Total Transactions", total_transactions_filtered)
-    with col3:
-        st.metric("💳 Total Invoice Value", f"{total_invoice_value:,.2f}")
+        # ---------------------------
+        # Display table with all PO + Invoice columns
+        # ---------------------------
+        display_cols = [
+            "Tran No",              # PO Tran No
+            "Tran Date",            # PO Tran Date
+            "Created Date",         # PO Created Date
+            "Particulars",          # PO Particulars
+            "Total",                # PO Total
+            "Converted",            # PO Converted
+            "Posted",               # PO Posted
+            "Invoice Tran No",      # Invoice Tran No
+            "Invoice Particulars",  # Invoice Particulars
+            "Invoice Total",        # Invoice Total
+            "Invoice Created Date"  # Invoice Created Date
+        ]
 
-    st.markdown(
-        f"**Total PO Transactions:** {total_transactions_all}  |  "
-        f"**Filtered Transactions:** {total_transactions_filtered}"
-    )
-
-    # ---------------------------
-    # Display table with all PO + Invoice columns
-    # ---------------------------
-    display_cols = [
-        "Tran No",              # PO Tran No
-        "Tran Date",            # PO Tran Date
-        "Created Date",         # PO Created Date
-        "Particulars",          # PO Particulars
-        "Total",                # PO Total
-        "Converted",            # PO Converted
-        "Posted",               # PO Posted
-        "Invoice Tran No",      # Invoice Tran No
-        "Invoice Particulars",  # Invoice Particulars
-        "Invoice Total",        # Invoice Total
-        "Invoice Created Date"  # Invoice Created Date
-    ]
-
-    st.subheader("Filtered Invoice Transactions (PO + Invoice Details)")
-    st.dataframe(
-        filtered_invoice[display_cols].sort_values(by="Invoice Created Date", ascending=False),
-        use_container_width=True,
-        height=600
-    )
+        st.subheader("Filtered Invoice Transactions (PO + Invoice Details)")
+        st.dataframe(
+            filtered_invoice[display_cols].sort_values(by="Invoice Created Date", ascending=False),
+            use_container_width=True,
+            height=600
+        )
