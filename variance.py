@@ -105,11 +105,11 @@ if page == "Transactions Dashboard":
     )
 
 # ---------------------------
-# Invoice Analysis: PO + Invoice Details
+# Invoice Analysis: Show corresponding POs only
 # ---------------------------
 if page == "Invoice Analysis":
     st.set_page_config(page_title="Invoice Analysis", layout="wide")
-    st.title("📄 Invoice Analysis: POs vs Invoices")
+    st.title("📄 Invoice Analysis: Corresponding POs")
 
     # Filter POs: Posted = Checked, Converted = Unchecked
     po_filtered = df[(df["Posted"] == "Checked") & (df["Converted"] == "Unchecked")].copy()
@@ -127,15 +127,13 @@ if page == "Invoice Analysis":
             return pd.Series({
                 "Invoice Tran No": inv_row["Tran No"],
                 "Invoice Created Date": inv_row["Created Date"],
-                "Invoice Total": inv_row["Total"],
-                "Invoice Particulars": inv_row["Particulars"]
+                "Invoice Total": inv_row["Total"]
             })
         else:
             return pd.Series({
                 "Invoice Tran No": None,
                 "Invoice Created Date": None,
-                "Invoice Total": None,
-                "Invoice Particulars": None
+                "Invoice Total": None
             })
 
     # Apply invoice matching
@@ -146,7 +144,7 @@ if page == "Invoice Analysis":
     filtered_po_invoice = po_with_invoice[po_with_invoice["Invoice Tran No"].notnull()]
 
     # ---------------------------
-    # Summary Metrics
+    # Show summary metrics
     # ---------------------------
     total_matched = len(filtered_po_invoice)
     total_po_value = filtered_po_invoice["Total"].sum()
@@ -161,13 +159,13 @@ if page == "Invoice Analysis":
         st.metric("💳 Total Invoice Value", f"{total_invoice_value:,.2f}")
 
     # ---------------------------
-    # Display combined PO + Invoice table
+    # Display table: POs corresponding to invoices
     # ---------------------------
     display_cols = [
         "Tran No", "Particulars", "Total", "Created Date", "Posted", "Converted",
         "Invoice Tran No", "Invoice Created Date", "Invoice Total"
     ]
-    st.subheader("POs with Corresponding Invoices")
+    st.subheader("POs Corresponding to Received Invoices")
     st.dataframe(
         filtered_po_invoice[display_cols].sort_values(by="Invoice Created Date", ascending=False),
         use_container_width=True,
