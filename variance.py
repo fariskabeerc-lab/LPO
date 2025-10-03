@@ -105,37 +105,30 @@ if page == "Transactions Dashboard":
     )
 
 # ---------------------------
-# Invoice Analysis: Show only invoice details + particulars
+# Invoice Analysis: Only invoices corresponding to filtered POs
 # ---------------------------
 if page == "Invoice Analysis":
     st.set_page_config(page_title="Invoice Analysis", layout="wide")
-    st.title("📄 Invoice Analysis: Invoices Corresponding to POs")
+    st.title("📄 Invoice Analysis: Filtered Invoices Corresponding to POs")
 
-    # Filter POs: Posted = Checked, Converted = Unchecked
+    # Step 1: Filter POs: Posted = Checked, Converted = Unchecked
     po_filtered = df[(df["Posted"] == "Checked") & (df["Converted"] == "Unchecked")].copy()
 
-    # Ensure numeric
+    # Step 2: Ensure numeric
     po_filtered["Total"] = pd.to_numeric(po_filtered["Total"], errors="coerce")
     invoice_df["Total"] = pd.to_numeric(invoice_df["Total"], errors="coerce")
 
-    # Function to find invoices for a PO
-    def find_invoice_for_po(po_row, inv_df):
-        matches = inv_df[(inv_df["Particulars"] == po_row["Particulars"]) &
-                         (inv_df["Created Date"] > po_row["Created Date"])]
-        if not matches.empty:
-            return matches[["Tran No", "Created Date", "Total", "Particulars"]]
-        else:
-            return pd.DataFrame()
-
-    # Collect all invoices corresponding to POs
-    all_invoices_list = []
+    # Step 3: Find invoices corresponding to filtered POs
+    filtered_invoices_list = []
     for _, po_row in po_filtered.iterrows():
-        matched_invoices = find_invoice_for_po(po_row, invoice_df)
+        matched_invoices = invoice_df[(invoice_df["Particulars"] == po_row["Particulars"]) &
+                                      (invoice_df["Created Date"] > po_row["Created Date"])]
         if not matched_invoices.empty:
-            all_invoices_list.append(matched_invoices)
+            filtered_invoices_list.append(matched_invoices[["Tran No", "Created Date", "Total", "Particulars"]])
 
-    if all_invoices_list:
-        filtered_invoices = pd.concat(all_invoices_list).drop_duplicates().sort_values(by="Created Date", ascending=False)
+    if filtered_invoices_list:
+        # Combine all filtered invoices
+        filtered_invoices = pd.concat(filtered_invoices_list).drop_duplicates().sort_values(by="Created Date", ascending=False)
 
         # ---------------------------
         # Summary metrics
@@ -143,14 +136,14 @@ if page == "Invoice Analysis":
         st.subheader("Invoice Metrics")
         col1, col2 = st.columns(2)
         with col1:
-            st.metric("🧾 Total Invoices", len(filtered_invoices))
+            st.metric("🧾 Total Filtered Invoices", len(filtered_invoices))
         with col2:
             st.metric("💳 Total Invoice Value", f"{filtered_invoices['Total'].sum():,.2f}")
 
         # ---------------------------
         # Display table
         # ---------------------------
-        st.subheader("Invoices Corresponding to POs")
+        st.subheader("Invoices Corresponding to Filtered POs")
         st.dataframe(filtered_invoices, use_container_width=True, height=600)
 
     else:
