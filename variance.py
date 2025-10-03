@@ -15,7 +15,7 @@ st.set_page_config(page_title="Transaction Dashboard", layout="wide")
 st.title("📊 Transaction Dashboard")
 
 # ---------------------------
-# Sidebar Filters (Separate with All option)
+# Sidebar Filters
 # ---------------------------
 st.sidebar.header("Filters")
 
@@ -45,19 +45,19 @@ if converted_status != "All":
     df_filtered = df_filtered[df_filtered["Converted"] == converted_status]
 
 # ---------------------------
-# Metrics based on full dataset
+# Metrics based on filtered data
 # ---------------------------
-total_sum_all = df["Total"].sum()
-total_count_all = len(df)
-total_qty_all = df["Total Qty"].sum() if "Total Qty" in df.columns else 0
+total_sum_filtered = df_filtered["Total"].sum()
+total_count_filtered = len(df_filtered)
+total_qty_filtered = df_filtered["Total Qty"].sum() if "Total Qty" in df_filtered.columns else 0
 
 col1, col2, col3 = st.columns(3)
 with col1:
-    st.metric("💰 Sum of Total", f"{total_sum_all:,.2f}")
+    st.metric("💰 Sum of Total", f"{total_sum_filtered:,.2f}")
 with col2:
-    st.metric("🧾 Number of Transactions", total_count_all)
+    st.metric("🧾 Number of Transactions", total_count_filtered)
 with col3:
-    st.metric("📦 Total Quantity", f"{total_qty_all:,.0f}")
+    st.metric("📦 Total Quantity", f"{total_qty_filtered:,.0f}")
 
 # ---------------------------
 # Top 30 transactions by Total for graph
