@@ -117,14 +117,14 @@ if page == "Invoice Analysis":
     merged_df = pd.merge(
         invoice_df,
         df,
-        on=["Particulars"],
+        on=["Particulars"],  # change to correct key if needed (Supplier or Reference)
         suffixes=("_inv", "_po")
     )
 
     # Filter: PO checked, Converted unchecked, Invoice after PO date
     filtered_invoice = merged_df[
         (merged_df["Posted_po"] == "Checked") &
-        (merged_df["Converted"] == "Unchecked") &
+        (merged_df["Converted_po"] == "Unchecked") &
         (merged_df["Invoice Print Date"] > merged_df["Tran Date_po"])
     ]
 
