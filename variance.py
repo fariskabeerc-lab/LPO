@@ -5,7 +5,6 @@ import plotly.express as px
 # ---------------------------
 # Load your dataset
 # ---------------------------
-# Change to your file path
 df = pd.read_excel("transactions.xlsx")  
 # df = pd.read_csv("transactions.csv")
 
@@ -39,7 +38,7 @@ with col3:
     st.metric("📦 Total Quantity", f"{total_qty:,.0f}")
 
 # ---------------------------
-# Horizontal Bar Chart
+# Horizontal Bar Chart (Dark Mode)
 # ---------------------------
 st.subheader("Transactions by Total (Ascending)")
 
@@ -50,15 +49,27 @@ fig = px.bar(
     orientation="h",
     text="Total",
     hover_data=["Tran Date", "Particulars", "Discount", "Net Total"],
+    color="Total",  # Gradient based on Total
+    color_continuous_scale="Viridis"
 )
 
-fig.update_traces(marker=dict(color="teal", line=dict(width=1, color="white")))
+fig.update_traces(
+    marker=dict(line=dict(width=1, color="black")),
+    texttemplate="%{text:,.2f}",
+    textposition="outside"
+)
+
 fig.update_layout(
     xaxis_title="Total Value",
     yaxis_title="Transaction No",
-    bargap=0.35,
+    bargap=0.25,
     height=600,
-    plot_bgcolor="white"
+    plot_bgcolor="#1e1e1e",  # Dark background
+    paper_bgcolor="#1e1e1e",
+    font=dict(color="white"),  # White font for dark background
+    xaxis=dict(gridcolor="gray"),
+    yaxis=dict(gridcolor="gray"),
+    coloraxis_colorbar=dict(title="Total")
 )
 
 st.plotly_chart(fig, use_container_width=True)
