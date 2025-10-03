@@ -3,13 +3,13 @@ import pandas as pd
 import plotly.express as px
 
 # ---------------------------
-# Load your dataset
+# Load dataset
 # ---------------------------
 df = pd.read_excel("transactions.xlsx")  
 # df = pd.read_csv("transactions.csv")
 
 # ---------------------------
-# Sort by Total (descending) and take top 30
+# Top 30 transactions by Total
 # ---------------------------
 df_sorted = df.sort_values(by="Total", ascending=False).head(30)
 
@@ -38,44 +38,42 @@ with col3:
     st.metric("📦 Total Quantity", f"{total_qty:,.0f}")
 
 # ---------------------------
-# Horizontal Bar Chart (Classic Style)
+# Horizontal Bar Chart (Simple)
 # ---------------------------
 st.subheader("Top 30 Transactions by Total Value")
 
 fig = px.bar(
     df_sorted,
     x="Total",
-    y="Tran No",
+    y="Particulars",
     orientation="h",
     text="Total",
-    hover_data=["Tran Date", "Particulars", "Discount", "Net Total"],
-    color_discrete_sequence=["teal"]  # Solid teal color
+    hover_data=["Tran No", "Tran Date", "Discount", "Net Total"],
+    color_discrete_sequence=["teal"]
 )
 
 fig.update_traces(
     texttemplate="%{text:,.2f}",
     textposition="outside",
-    marker=dict(line=dict(width=1, color="white"))  # White border for clarity
+    marker=dict(line=dict(width=1, color="white"))
 )
 
 fig.update_layout(
     xaxis_title="Total Value",
-    yaxis_title="Transaction No",
-    yaxis=dict(
-        autorange="reversed",  # Highest total on top
-        gridcolor="gray"
-    ),
-    bargap=0.3,
-    height=800,
-    plot_bgcolor="#1e1e1e",  # Dark background
+    yaxis_title="Particulars",
+    yaxis=dict(autorange="reversed"),  # Largest on top
+    height=800,  # Large enough for readability
+    plot_bgcolor="#1e1e1e",
     paper_bgcolor="#1e1e1e",
-    font=dict(color="white")
+    font=dict(color="white"),
+    xaxis=dict(gridcolor="gray"),
+    yaxis=dict(gridcolor="gray")
 )
 
 st.plotly_chart(fig, use_container_width=True)
 
 # ---------------------------
-# Sorted Transactions Table (Top 30)
+# Top 30 Transactions Table
 # ---------------------------
 st.subheader("Top 30 Detailed Transactions Table")
 
@@ -86,3 +84,4 @@ st.dataframe(
     use_container_width=True,
     height=500
 )
+
