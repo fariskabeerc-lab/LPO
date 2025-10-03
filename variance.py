@@ -15,6 +15,15 @@ df.columns = df.columns.str.strip().str.replace("\n", "").str.replace("\r", "")
 invoice_df.columns = invoice_df.columns.str.strip().str.replace("\n", "").str.replace("\r", "")
 
 # ---------------------------
+# Convert columns for merging/comparison
+# ---------------------------
+df["Tran No"] = df["Tran No"].astype(str).str.strip()
+invoice_df["Tran No"] = invoice_df["Tran No"].astype(str).str.strip()
+
+df["Tran Date"] = pd.to_datetime(df["Tran Date"], errors="coerce")
+invoice_df["Invoice Print Date"] = pd.to_datetime(invoice_df["Invoice Print Date"], errors="coerce")
+
+# ---------------------------
 # Sidebar Page Selection
 # ---------------------------
 page = st.sidebar.radio("📑 Select Page", ["Transactions Dashboard", "Invoice Analysis"])
@@ -112,17 +121,25 @@ if page == "Invoice Analysis":
     # Filter PO for Unchecked Converted
     po_unconverted = df[df["Converted"] == "Unchecked"]
 
-    # Keep only transactions that exist in invoice list
-    po_with_invoice = po_unconverted[po_unconverted["Tran No"].isin(invoice_df["Tran No"])]
+    # Merge PO with invoice list on Tran No
+    merged_df = pd.merge(
+        po_unconverted,
+        invoice_df,
+        on="Tran No",
+        suffixes=("_po", "_inv")
+    )
 
-    st.markdown(f"**Total Transactions:** {len(po_with_invoice)}")
+    # Filter: Invoice Print Date after PO Date
+    filtered_invoice = merged_df[merged_df["Invoice Print Date"] > merged_df["Tran Date"]]
 
-    if po_with_invoice.empty:
+    st.markdown(f"**Total Transactions:** {len(filtered_invoice)}")
+
+    if filtered_invoice.empty:
         st.info("No transactions match the criteria.")
     else:
-        display_cols = ["Tran No", "Particulars", "Total", "Converted", "Posted"]
+        display_cols = ["Tran No", "Particulars_po", "Total_po", "Invoice Print Date", "Converted", "Posted"]
         st.dataframe(
-            po_with_invoice[display_cols],
+            filtered_invoice[display_cols].sort_values(by="Invoice Print Date", ascending=False),
             use_container_width=True,
             height=600
         )
