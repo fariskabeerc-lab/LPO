@@ -109,48 +109,20 @@ if page == "Invoice Analysis":
     st.set_page_config(page_title="Invoices Not Converted", layout="wide")
     st.title("📄 Transactions with Invoices Not Yet Converted")
 
-    # Ensure date columns are datetime
-    df["Tran Date"] = pd.to_datetime(df["Tran Date"], errors="coerce")
-    invoice_df["Invoice Print Date"] = pd.to_datetime(invoice_df["Invoice Print Date"], errors="coerce")
+    # Filter PO for Unchecked Converted
+    po_unconverted = df[df["Converted"] == "Unchecked"]
 
-    # Merge on Tran No
-    merged_df = pd.merge(
-        invoice_df,
-        df,
-        on="Tran No",
-        suffixes=("_inv", "_po")
-    )
+    # Keep only transactions that exist in invoice list
+    po_with_invoice = po_unconverted[po_unconverted["Tran No"].isin(invoice_df["Tran No"])]
 
-    # Clean merged columns
-    merged_df.columns = merged_df.columns.str.strip()
+    st.markdown(f"**Total Transactions:** {len(po_with_invoice)}")
 
-    # Ensure required columns exist
-    required_columns = ["Posted_po", "Converted_po", "Invoice Print Date", "Tran Date_po", "Particulars_po", "Total_po"]
-    for col in required_columns:
-        if col not in merged_df.columns:
-            st.error(f"Column '{col}' not found in merged dataframe. Check your Excel files.")
-            st.stop()
-
-    # Convert dates and drop missing
-    merged_df["Invoice Print Date"] = pd.to_datetime(merged_df["Invoice Print Date"], errors="coerce")
-    merged_df["Tran Date_po"] = pd.to_datetime(merged_df["Tran Date_po"], errors="coerce")
-    merged_df = merged_df.dropna(subset=["Invoice Print Date", "Tran Date_po"])
-
-    # Filter: PO Checked, Converted Unchecked, Invoice after PO date
-    filtered_invoice = merged_df[
-        (merged_df["Posted_po"] == "Checked") &
-        (merged_df["Converted_po"] == "Unchecked") &
-        (merged_df["Invoice Print Date"] > merged_df["Tran Date_po"])
-    ]
-
-    st.markdown(f"**Total Transactions:** {len(filtered_invoice)}")
-
-    if filtered_invoice.empty:
+    if po_with_invoice.empty:
         st.info("No transactions match the criteria.")
     else:
-        display_cols = [col for col in ["Tran No", "Particulars_po", "Total_po", "Invoice Print Date", "Converted_po", "Posted_po"] if col in filtered_invoice.columns]
+        display_cols = ["Tran No", "Particulars", "Total", "Converted", "Posted"]
         st.dataframe(
-            filtered_invoice[display_cols].sort_values(by="Invoice Print Date", ascending=False),
+            po_with_invoice[display_cols],
             use_container_width=True,
             height=600
         )
