@@ -105,11 +105,11 @@ if page == "Transactions Dashboard":
     )
 
 # ---------------------------
-# Invoice Analysis: Show corresponding POs only
+# Invoice Analysis: Show only invoice details + particulars
 # ---------------------------
 if page == "Invoice Analysis":
     st.set_page_config(page_title="Invoice Analysis", layout="wide")
-    st.title("📄 Invoice Analysis: Corresponding POs")
+    st.title("📄 Invoice Analysis: Invoices Corresponding to POs")
 
     # Filter POs: Posted = Checked, Converted = Unchecked
     po_filtered = df[(df["Posted"] == "Checked") & (df["Converted"] == "Unchecked")].copy()
@@ -118,56 +118,40 @@ if page == "Invoice Analysis":
     po_filtered["Total"] = pd.to_numeric(po_filtered["Total"], errors="coerce")
     invoice_df["Total"] = pd.to_numeric(invoice_df["Total"], errors="coerce")
 
-    # Function to find the next invoice for a PO
-    def find_next_invoice(po_row, inv_df):
+    # Function to find invoices for a PO
+    def find_invoice_for_po(po_row, inv_df):
         matches = inv_df[(inv_df["Particulars"] == po_row["Particulars"]) &
                          (inv_df["Created Date"] > po_row["Created Date"])]
         if not matches.empty:
-            inv_row = matches.sort_values(by="Created Date").iloc[0]  # earliest invoice after PO
-            return pd.Series({
-                "Invoice Tran No": inv_row["Tran No"],
-                "Invoice Created Date": inv_row["Created Date"],
-                "Invoice Total": inv_row["Total"]
-            })
+            return matches[["Tran No", "Created Date", "Total", "Particulars"]]
         else:
-            return pd.Series({
-                "Invoice Tran No": None,
-                "Invoice Created Date": None,
-                "Invoice Total": None
-            })
+            return pd.DataFrame()
 
-    # Apply invoice matching
-    invoice_matches = po_filtered.apply(lambda r: find_next_invoice(r, invoice_df), axis=1)
-    po_with_invoice = pd.concat([po_filtered.reset_index(drop=True), invoice_matches], axis=1)
+    # Collect all invoices corresponding to POs
+    all_invoices_list = []
+    for _, po_row in po_filtered.iterrows():
+        matched_invoices = find_invoice_for_po(po_row, invoice_df)
+        if not matched_invoices.empty:
+            all_invoices_list.append(matched_invoices)
 
-    # Keep only POs with a matching invoice
-    filtered_po_invoice = po_with_invoice[po_with_invoice["Invoice Tran No"].notnull()]
+    if all_invoices_list:
+        filtered_invoices = pd.concat(all_invoices_list).drop_duplicates().sort_values(by="Created Date", ascending=False)
 
-    # ---------------------------
-    # Show summary metrics
-    # ---------------------------
-    total_matched = len(filtered_po_invoice)
-    total_po_value = filtered_po_invoice["Total"].sum()
-    total_invoice_value = filtered_po_invoice["Invoice Total"].sum()
+        # ---------------------------
+        # Summary metrics
+        # ---------------------------
+        st.subheader("Invoice Metrics")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("🧾 Total Invoices", len(filtered_invoices))
+        with col2:
+            st.metric("💳 Total Invoice Value", f"{filtered_invoices['Total'].sum():,.2f}")
 
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("🧾 Total Matched POs", total_matched)
-    with col2:
-        st.metric("💰 Total PO Value", f"{total_po_value:,.2f}")
-    with col3:
-        st.metric("💳 Total Invoice Value", f"{total_invoice_value:,.2f}")
+        # ---------------------------
+        # Display table
+        # ---------------------------
+        st.subheader("Invoices Corresponding to POs")
+        st.dataframe(filtered_invoices, use_container_width=True, height=600)
 
-    # ---------------------------
-    # Display table: POs corresponding to invoices
-    # ---------------------------
-    display_cols = [
-        "Tran No", "Particulars", "Total", "Created Date", "Posted", "Converted",
-        "Invoice Tran No", "Invoice Created Date", "Invoice Total"
-    ]
-    st.subheader("POs Corresponding to Received Invoices")
-    st.dataframe(
-        filtered_po_invoice[display_cols].sort_values(by="Invoice Created Date", ascending=False),
-        use_container_width=True,
-        height=600
-    )
+    else:
+        st.info("No invoices found corresponding to the filtered POs.")
