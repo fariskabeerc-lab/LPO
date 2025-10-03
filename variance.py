@@ -19,7 +19,7 @@ df = clean_cols(df)
 invoice_df = clean_cols(invoice_df)
 
 # ---------------------------
-# Convert necessary columns
+# Convert necessary columns to datetime
 # ---------------------------
 df["Created Date"] = pd.to_datetime(df["Created Date"], errors="coerce")
 invoice_df["Created Date"] = pd.to_datetime(invoice_df["Created Date"], errors="coerce")
@@ -125,32 +125,45 @@ if page == "Invoice Analysis":
     st.set_page_config(page_title="Invoices Not Converted", layout="wide")
     st.title("📄 Transactions with Invoices Not Yet Converted")
 
-    # Filter POs: Posted = Checked and Converted = Unchecked
-    po_filtered = df[(df["Posted"] == "Checked") & (df["Converted"] == "Unchecked")]
+    # Filter POs: Posted = Checked, Converted = Unchecked
+    po_filtered = df[(df["Posted"] == "Checked") & (df["Converted"] == "Unchecked")].copy()
 
-    # Merge on Particulars only
-    merged_df = pd.merge(
-        po_filtered,
-        invoice_df,
-        on=["Particulars"],
-        suffixes=("_po", "_inv")
-    )
+    # Ensure numeric columns
+    po_filtered["Total"] = pd.to_numeric(po_filtered["Total"], errors="coerce")
+    invoice_df["Total"] = pd.to_numeric(invoice_df["Total"], errors="coerce")
 
-    # Filter invoices created after PO Created Date
-    filtered_invoice = merged_df[merged_df["Created Date_inv"] > merged_df["Created Date_po"]]
+    # For each PO, find first matching invoice after Created Date for same Particular
+    def match_invoice(row, inv_df):
+        matches = inv_df[(inv_df["Particulars"] == row["Particulars"]) &
+                         (inv_df["Created Date"] > row["Created Date"])]
+        if not matches.empty:
+            inv_row = matches.iloc[0]
+            return pd.Series({
+                "Invoice Tran No": inv_row["Tran No"],
+                "Invoice Created Date": inv_row["Created Date"],
+                "Invoice Total": inv_row["Total"]
+            })
+        else:
+            return pd.Series({
+                "Invoice Tran No": None,
+                "Invoice Created Date": None,
+                "Invoice Total": 0
+            })
+
+    invoice_matches = po_filtered.apply(lambda r: match_invoice(r, invoice_df), axis=1)
+    po_with_invoice = pd.concat([po_filtered.reset_index(drop=True), invoice_matches], axis=1)
+
+    # Keep only POs that have matching invoices
+    filtered_invoice = po_with_invoice[po_with_invoice["Invoice Tran No"].notnull()]
 
     # ---------------------------
-    # Key Insights (from filtered_invoice)
+    # Key Insights (from filtered_invoice only)
     # ---------------------------
     if filtered_invoice.empty:
         st.info("No transactions match the criteria.")
     else:
-        # Ensure numeric columns
-        filtered_invoice["Total_po"] = pd.to_numeric(filtered_invoice["Total_po"], errors="coerce")
-        filtered_invoice["Total_inv"] = pd.to_numeric(filtered_invoice["Total_inv"], errors="coerce")
-
-        total_po_value = filtered_invoice["Total_po"].sum()
-        total_invoice_value = filtered_invoice["Total_inv"].sum()
+        total_po_value = filtered_invoice["Total"].sum()
+        total_invoice_value = filtered_invoice["Invoice Total"].sum()
         total_transactions_filtered = len(filtered_invoice)
         total_transactions_all = len(po_filtered)
 
@@ -166,18 +179,19 @@ if page == "Invoice Analysis":
 
         # Display filtered invoice table
         display_cols = [
-            "Tran No_po",
-            "Tran No_inv",
+            "Tran No",
+            "Invoice Tran No",
             "Particulars",
-            "Total_po",
-            "Created Date_po",
-            "Created Date_inv",
-            "Converted_po",
-            "Posted_po"
+            "Total",
+            "Invoice Total",
+            "Created Date",
+            "Invoice Created Date",
+            "Converted",
+            "Posted"
         ]
         st.subheader("Filtered Invoice Transactions")
         st.dataframe(
-            filtered_invoice[display_cols].sort_values(by="Created Date_inv", ascending=False),
+            filtered_invoice[display_cols].sort_values(by="Invoice Created Date", ascending=False),
             use_container_width=True,
             height=600
         )
