@@ -5,7 +5,7 @@ import plotly.express as px
 # ---------------------------
 # Load your dataset
 # ---------------------------
-# Change file path if needed
+# Change to your file path
 df = pd.read_excel("transactions.xlsx")  
 # df = pd.read_csv("transactions.csv")
 
@@ -15,23 +15,28 @@ df = pd.read_excel("transactions.xlsx")
 df_sorted = df.sort_values(by="Total", ascending=True)
 
 # ---------------------------
-# Big Insights at Top
+# Dashboard Title
 # ---------------------------
-st.title("Transaction Insights")
+st.set_page_config(page_title="Transaction Dashboard", layout="wide")
+st.title("📊 Transaction Dashboard")
 
-col1, col2, col3, col4 = st.columns(4)
+# ---------------------------
+# Key Metrics
+# ---------------------------
+total_sum = df_sorted["Total"].sum()
+total_count = len(df_sorted)
+total_qty = df_sorted["Total Qty"].sum() if "Total Qty" in df_sorted.columns else 0
+
+col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.metric("Total Transactions", len(df_sorted))
+    st.metric("💰 Sum of Total", f"{total_sum:,.2f}")
 
 with col2:
-    st.metric("Lowest Total", f"{df_sorted['Total'].min():,.2f}")
+    st.metric("🧾 Number of Transactions", total_count)
 
 with col3:
-    st.metric("Highest Total", f"{df_sorted['Total'].max():,.2f}")
-
-with col4:
-    st.metric("Average Total", f"{df_sorted['Total'].mean():,.2f}")
+    st.metric("📦 Total Quantity", f"{total_qty:,.0f}")
 
 # ---------------------------
 # Horizontal Bar Chart
@@ -47,18 +52,26 @@ fig = px.bar(
     hover_data=["Tran Date", "Particulars", "Discount", "Net Total"],
 )
 
-fig.update_traces(marker=dict(color="steelblue", line=dict(width=1, color="white")))
+fig.update_traces(marker=dict(color="teal", line=dict(width=1, color="white")))
 fig.update_layout(
     xaxis_title="Total Value",
     yaxis_title="Transaction No",
-    bargap=0.4,
-    height=600
+    bargap=0.35,
+    height=600,
+    plot_bgcolor="white"
 )
 
 st.plotly_chart(fig, use_container_width=True)
 
 # ---------------------------
-# Show Sorted Table
+# Sorted Transactions Table
 # ---------------------------
 st.subheader("Detailed Transactions Table (Sorted by Total)")
-st.dataframe(df_sorted[["Tran No", "Tran Date", "Particulars", "Total", "Discount", "Net Total"]])
+
+st.dataframe(
+    df_sorted[
+        ["Tran No", "Tran Date", "Particulars", "Total", "Discount", "Net Total", "Total Qty"]
+    ],
+    use_container_width=True,
+    height=500
+)
