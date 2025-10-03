@@ -134,24 +134,24 @@ if page == "Invoice Analysis":
     filtered_invoice = merged_df[merged_df["Created Date_inv"] > merged_df["Created Date_po"]]
 
     # ---------------------------
-    # Key Insights
+    # Key Insights (based only on final filtered data)
     # ---------------------------
-    total_transactions = len(filtered_invoice)
-    total_po_value = filtered_invoice["Total_po"].sum()
-    total_invoice_value = filtered_invoice["Total_inv"].sum() if "Total_inv" in filtered_invoice.columns else 0
-
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("💰 Total PO Value", f"{total_po_value:,.2f}")
-    with col2:
-        st.metric("🧾 Total Transactions", total_transactions)
-    with col3:
-        st.metric("💳 Total Invoice Value", f"{total_invoice_value:,.2f}")
-
-    # Display table
     if filtered_invoice.empty:
         st.info("No transactions match the criteria.")
     else:
+        total_transactions = len(filtered_invoice)
+        total_po_value = filtered_invoice["Total_po"].sum()
+        total_invoice_value = filtered_invoice["Total_inv"].sum() if "Total_inv" in filtered_invoice.columns else 0
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("💰 Total PO Value", f"{total_po_value:,.2f}")
+        with col2:
+            st.metric("🧾 Total Transactions", total_transactions)
+        with col3:
+            st.metric("💳 Total Invoice Value", f"{total_invoice_value:,.2f}")
+
+        # Display table
         display_cols = [
             "Tran No_po",
             "Tran No_inv",
@@ -162,6 +162,7 @@ if page == "Invoice Analysis":
             "Converted_po",
             "Posted_po"
         ]
+        st.subheader("Filtered Invoice Transactions")
         st.dataframe(
             filtered_invoice[display_cols].sort_values(by="Created Date_inv", ascending=False),
             use_container_width=True,
