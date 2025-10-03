@@ -119,12 +119,12 @@ if page == "Invoice Analysis":
     st.set_page_config(page_title="Invoices Not Converted", layout="wide")
     st.title("📄 Transactions with Invoices Not Yet Converted")
 
-    # Filter POs: Converted = Unchecked
-    po_unconverted = df[df["Converted"] == "Unchecked"]
+    # Filter POs: Posted = Checked and Converted = Unchecked
+    po_filtered = df[(df["Posted"] == "Checked") & (df["Converted"] == "Unchecked")]
 
-    # Merge on Particulars only (ignore Tran No and Supplier)
+    # Merge on Particulars only (ignore Tran No)
     merged_df = pd.merge(
-        po_unconverted,
+        po_filtered,
         invoice_df,
         on=["Particulars"],
         suffixes=("_po", "_inv")
@@ -140,6 +140,7 @@ if page == "Invoice Analysis":
     else:
         display_cols = [
             "Tran No_po",
+            "Tran No_inv",
             "Particulars",
             "Total_po",
             "Created Date_po",
