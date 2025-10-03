@@ -9,7 +9,7 @@ df = pd.read_excel("transactions.xlsx")
 # df = pd.read_csv("transactions.csv")
 
 # ---------------------------
-# Sort by Total (descending) to get top 30
+# Sort by Total (descending) and take top 30
 # ---------------------------
 df_sorted = df.sort_values(by="Total", ascending=False).head(30)
 
@@ -38,7 +38,7 @@ with col3:
     st.metric("📦 Total Quantity", f"{total_qty:,.0f}")
 
 # ---------------------------
-# Horizontal Bar Chart (Dark Mode)
+# Horizontal Bar Chart (Classic Style)
 # ---------------------------
 st.subheader("Top 30 Transactions by Total Value")
 
@@ -49,27 +49,26 @@ fig = px.bar(
     orientation="h",
     text="Total",
     hover_data=["Tran Date", "Particulars", "Discount", "Net Total"],
-    color="Total",
-    color_continuous_scale=px.colors.sequential.Plasma  # Bright colors for dark background
+    color_discrete_sequence=["teal"]  # Solid teal color
 )
 
 fig.update_traces(
-    marker=dict(line=dict(width=1, color="black")),
     texttemplate="%{text:,.2f}",
-    textposition="outside"
+    textposition="outside",
+    marker=dict(line=dict(width=1, color="white"))  # White border for clarity
 )
 
 fig.update_layout(
     xaxis_title="Total Value",
     yaxis_title="Transaction No",
-    bargap=0.25,
+    yaxis=dict(autorange="reversed"),  # Highest total on top
+    bargap=0.3,
     height=800,
-    plot_bgcolor="#0e1117",  # Dark background
-    paper_bgcolor="#0e1117",
+    plot_bgcolor="#1e1e1e",  # Dark background
+    paper_bgcolor="#1e1e1e",
     font=dict(color="white"),
     xaxis=dict(gridcolor="gray"),
-    yaxis=dict(gridcolor="gray"),
-    coloraxis_colorbar=dict(title="Total")
+    yaxis=dict(gridcolor="gray")
 )
 
 st.plotly_chart(fig, use_container_width=True)
