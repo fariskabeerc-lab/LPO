@@ -15,31 +15,34 @@ st.set_page_config(page_title="Transaction Dashboard", layout="wide")
 st.title("📊 Transaction Dashboard")
 
 # ---------------------------
-# Sidebar Filters (checkbox style)
+# Sidebar Filters (Separate with All option)
 # ---------------------------
 st.sidebar.header("Filters")
 
-# Function to create standard checkbox filters
-def create_checkbox_filter(column_name, label):
-    unique_values = df[column_name].dropna().unique().tolist()
-    
-    # Default all checked
-    checked_values = []
-    for val in unique_values:
-        if st.sidebar.checkbox(f"{label}: {val}", value=True):
-            checked_values.append(val)
-    
-    # If none selected, select all automatically
-    if not checked_values:
-        checked_values = unique_values
-    return checked_values
+# PO Status filter
+po_status = st.sidebar.selectbox(
+    "PO Status",
+    options=["All"] + sorted(df["Posted"].dropna().unique().tolist()),
+    index=0
+)
 
-# Apply checkbox filters
-posted_values = create_checkbox_filter("Posted", "PO Status")
-converted_values = create_checkbox_filter("Converted", "Converted Status")
+# Converted Status filter
+converted_status = st.sidebar.selectbox(
+    "Converted Status",
+    options=["All"] + sorted(df["Converted"].dropna().unique().tolist()),
+    index=0
+)
 
-# Filter the dataframe
-df_filtered = df[(df["Posted"].isin(posted_values)) & (df["Converted"].isin(converted_values))]
+# ---------------------------
+# Apply filters
+# ---------------------------
+df_filtered = df.copy()
+
+if po_status != "All":
+    df_filtered = df_filtered[df_filtered["Posted"] == po_status]
+
+if converted_status != "All":
+    df_filtered = df_filtered[df_filtered["Converted"] == converted_status]
 
 # ---------------------------
 # Metrics based on full dataset
