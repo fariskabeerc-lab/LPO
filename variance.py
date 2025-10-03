@@ -177,14 +177,14 @@ if page == "Invoice Analysis":
 
         st.markdown(f"**Total PO Transactions:** {total_transactions_all}  |  **Filtered Transactions:** {total_transactions_filtered}")
 
-        # Display filtered invoice table
+        # Display filtered invoice table with PO Tran No + Invoice Tran No
         display_cols = [
-            "Tran No",
-            "Invoice Tran No",
+            "Tran No",            # PO Tran No
+            "Invoice Tran No",    # Invoice Tran No
             "Particulars",
-            "Total",
+            "Total",              # PO Total
             "Invoice Total",
-            "Created Date",
+            "Created Date",       # PO Created Date
             "Invoice Created Date",
             "Converted",
             "Posted"
