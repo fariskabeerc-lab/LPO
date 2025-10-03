@@ -6,24 +6,7 @@ import plotly.express as px
 # Load dataset
 # ---------------------------
 df = pd.read_excel("transactions.xlsx")
-
-# ---------------------------
-# Clean column names
-# ---------------------------
-df.columns = df.columns.str.strip().str.replace("\n","").str.replace("\r","")
-
-# Make sure 'Posted' and 'Converted' columns exist
-for col in ['Posted', 'Converted']:
-    if col not in df.columns:
-        st.error(f"Column '{col}' not found in the dataset!")
-        st.stop()
-
-# ---------------------------
-# Metrics based on full dataset
-# ---------------------------
-total_sum_all = df["Total"].sum()
-total_count_all = len(df)
-total_qty_all = df["Total Qty"].sum() if "Total Qty" in df.columns else 0
+df.columns = df.columns.str.strip().str.replace("\n", "").str.replace("\r", "")
 
 # ---------------------------
 # Dashboard Title
@@ -32,44 +15,46 @@ st.set_page_config(page_title="Transaction Dashboard", layout="wide")
 st.title("📊 Transaction Dashboard")
 
 # ---------------------------
-# Sidebar Filters
+# Sidebar Filters (checkbox style)
 # ---------------------------
 st.sidebar.header("Filters")
 
-# Function to map checkbox selections
-def filter_options(col):
-    checked = st.sidebar.checkbox(f"{col} Checked", value=True)
-    unchecked = st.sidebar.checkbox(f"{col} Unchecked", value=True)
-    # Determine which values to include
-    include = []
-    if checked:
-        include.append("Yes")   # Assuming 'Yes' indicates checked
-    if unchecked:
-        include.append("No")    # Assuming 'No' indicates unchecked
-    if not include:  # If nothing selected, default to all
-        include = df[col].unique().tolist()
-    return include
+# Function to create standard checkbox filters
+def create_checkbox_filter(column_name, label):
+    unique_values = df[column_name].dropna().unique().tolist()
+    
+    # Default all checked
+    checked_values = []
+    for val in unique_values:
+        if st.sidebar.checkbox(f"{label}: {val}", value=True):
+            checked_values.append(val)
+    
+    # If none selected, select all automatically
+    if not checked_values:
+        checked_values = unique_values
+    return checked_values
 
-# Apply filters
-posted_filter = filter_options("Posted")
-converted_filter = filter_options("Converted")
+# Apply checkbox filters
+posted_values = create_checkbox_filter("Posted", "PO Status")
+converted_values = create_checkbox_filter("Converted", "Converted Status")
 
-df_filtered = df[(df['Posted'].isin(posted_filter)) & (df['Converted'].isin(converted_filter))]
+# Filter the dataframe
+df_filtered = df[(df["Posted"].isin(posted_values)) & (df["Converted"].isin(converted_values))]
 
 # ---------------------------
-# Metrics for filtered data
+# Metrics based on full dataset
 # ---------------------------
-total_sum_filtered = df_filtered["Total"].sum()
-total_count_filtered = len(df_filtered)
-total_qty_filtered = df_filtered["Total Qty"].sum() if "Total Qty" in df_filtered.columns else 0
+total_sum_all = df["Total"].sum()
+total_count_all = len(df)
+total_qty_all = df["Total Qty"].sum() if "Total Qty" in df.columns else 0
 
 col1, col2, col3 = st.columns(3)
 with col1:
-    st.metric("💰 Sum of Total (Filtered)", f"{total_sum_filtered:,.2f}")
+    st.metric("💰 Sum of Total", f"{total_sum_all:,.2f}")
 with col2:
-    st.metric("🧾 Number of Transactions (Filtered)", total_count_filtered)
+    st.metric("🧾 Number of Transactions", total_count_all)
 with col3:
-    st.metric("📦 Total Quantity (Filtered)", f"{total_qty_filtered:,.0f}")
+    st.metric("📦 Total Quantity", f"{total_qty_all:,.0f}")
 
 # ---------------------------
 # Top 30 transactions by Total for graph
@@ -108,9 +93,10 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 
 # ---------------------------
-# Full Transactions Table (filtered)
+# Full Transactions Table
 # ---------------------------
 st.subheader("Filtered Transactions Table")
+
 st.dataframe(
     df_filtered[
         ["Tran No", "Tran Date", "Particulars", "Total", "Discount", "Net Total", "Total Qty", "Posted", "Converted"]
