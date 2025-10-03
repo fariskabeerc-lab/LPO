@@ -61,14 +61,15 @@ fig.update_traces(
 fig.update_layout(
     xaxis_title="Total Value",
     yaxis_title="Transaction No",
-    yaxis=dict(autorange="reversed"),  # Highest total on top
+    yaxis=dict(
+        autorange="reversed",  # Highest total on top
+        gridcolor="gray"
+    ),
     bargap=0.3,
     height=800,
     plot_bgcolor="#1e1e1e",  # Dark background
     paper_bgcolor="#1e1e1e",
-    font=dict(color="white"),
-    xaxis=dict(gridcolor="gray"),
-    yaxis=dict(gridcolor="gray")
+    font=dict(color="white")
 )
 
 st.plotly_chart(fig, use_container_width=True)
