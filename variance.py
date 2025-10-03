@@ -5,47 +5,41 @@ import plotly.express as px
 # ---------------------------
 # Load your dataset
 # ---------------------------
-# Change this to your actual dataset file
-# Example: Excel or CSV
+# Change file path if needed
 df = pd.read_excel("transactions.xlsx")  
 # df = pd.read_csv("transactions.csv")
 
 # ---------------------------
-# Filter only Unchecked (Converted = 0 / False / No / empty)
+# Sort by Total (ascending)
 # ---------------------------
-unchecked_df = df[
-    (df["Converted"] == 0) | 
-    (df["Converted"] == "No") | 
-    (df["Converted"].isna())
-]
+df_sorted = df.sort_values(by="Total", ascending=True)
 
 # ---------------------------
-# Sort by Total ascending
+# Big Insights at Top
 # ---------------------------
-unchecked_df = unchecked_df.sort_values(by="Total", ascending=True)
+st.title("Transaction Insights")
 
-# ---------------------------
-# Page Title
-# ---------------------------
-st.title("Unchecked Transactions Dashboard")
+col1, col2, col3, col4 = st.columns(4)
 
-# ---------------------------
-# Quick Insights
-# ---------------------------
-st.subheader("Key Insights on Unchecked Transactions")
+with col1:
+    st.metric("Total Transactions", len(df_sorted))
 
-st.markdown(f"""
-- **Total unchecked transactions:** {len(unchecked_df)}  
-- **Lowest transaction value:** {unchecked_df['Total'].min()}  
-- **Highest transaction value:** {unchecked_df['Total'].max()}  
-- **Average transaction value:** {round(unchecked_df['Total'].mean(), 2)}  
-""")
+with col2:
+    st.metric("Lowest Total", f"{df_sorted['Total'].min():,.2f}")
+
+with col3:
+    st.metric("Highest Total", f"{df_sorted['Total'].max():,.2f}")
+
+with col4:
+    st.metric("Average Total", f"{df_sorted['Total'].mean():,.2f}")
 
 # ---------------------------
 # Horizontal Bar Chart
 # ---------------------------
+st.subheader("Transactions by Total (Ascending)")
+
 fig = px.bar(
-    unchecked_df,
+    df_sorted,
     x="Total",
     y="Tran No",
     orientation="h",
@@ -55,7 +49,6 @@ fig = px.bar(
 
 fig.update_traces(marker=dict(color="steelblue", line=dict(width=1, color="white")))
 fig.update_layout(
-    title="Unchecked Transactions by Total",
     xaxis_title="Total Value",
     yaxis_title="Transaction No",
     bargap=0.4,
@@ -65,7 +58,7 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 
 # ---------------------------
-# Show Detailed Table
+# Show Sorted Table
 # ---------------------------
-st.subheader("Detailed Table")
-st.dataframe(unchecked_df[["Tran No", "Tran Date", "Particulars", "Total", "Discount", "Net Total"]])
+st.subheader("Detailed Transactions Table (Sorted by Total)")
+st.dataframe(df_sorted[["Tran No", "Tran Date", "Particulars", "Total", "Discount", "Net Total"]])
