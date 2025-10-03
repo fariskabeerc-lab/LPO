@@ -15,13 +15,16 @@ df.columns = df.columns.str.strip().str.replace("\n", "").str.replace("\r", "")
 invoice_df.columns = invoice_df.columns.str.strip().str.replace("\n", "").str.replace("\r", "")
 
 # ---------------------------
-# Convert columns for merging/comparison
+# Convert necessary columns
 # ---------------------------
 df["Tran No"] = df["Tran No"].astype(str).str.strip()
 invoice_df["Tran No"] = invoice_df["Tran No"].astype(str).str.strip()
 
-df["Tran Date"] = pd.to_datetime(df["Tran Date"], errors="coerce")
-invoice_df["Invoice Print Date"] = pd.to_datetime(invoice_df["Invoice Print Date"], errors="coerce")
+df["Created Date"] = pd.to_datetime(df["Created Date"], errors="coerce")
+invoice_df["Created Date"] = pd.to_datetime(invoice_df["Created Date"], errors="coerce")
+
+df["Supplier"] = df["Particulars"]  # Replace with actual supplier column if exists
+invoice_df["Supplier"] = invoice_df["Particulars"]  # Replace with actual supplier column if exists
 
 # ---------------------------
 # Sidebar Page Selection
@@ -121,25 +124,28 @@ if page == "Invoice Analysis":
     # Filter PO for Unchecked Converted
     po_unconverted = df[df["Converted"] == "Unchecked"]
 
-    # Merge PO with invoice list on Tran No
+    # Merge PO with invoice list on Supplier + Particulars
     merged_df = pd.merge(
         po_unconverted,
         invoice_df,
-        on="Tran No",
+        on=["Supplier", "Particulars"],  # adjust columns if you have separate Supplier column
         suffixes=("_po", "_inv")
     )
 
-    # Filter: Invoice received after PO date
-    filtered_invoice = merged_df[merged_df["Invoice Print Date_inv"] > merged_df["Tran Date_po"]]
+    # Filter: Invoice Created Date after PO Created Date
+    filtered_invoice = merged_df[merged_df["Created Date_inv"] > merged_df["Created Date_po"]]
 
     st.markdown(f"**Total Transactions:** {len(filtered_invoice)}")
 
     if filtered_invoice.empty:
         st.info("No transactions match the criteria.")
     else:
-        display_cols = ["Tran No", "Particulars_po", "Total_po", "Invoice Print Date_inv", "Converted", "Posted"]
+        display_cols = [
+            "Tran No", "Particulars", "Total_po", "Created Date_po", 
+            "Created Date_inv", "Converted", "Posted"
+        ]
         st.dataframe(
-            filtered_invoice[display_cols].sort_values(by="Invoice Print Date_inv", ascending=False),
+            filtered_invoice[display_cols].sort_values(by="Created Date_inv", ascending=False),
             use_container_width=True,
             height=600
         )
